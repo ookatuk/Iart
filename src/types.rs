@@ -39,10 +39,10 @@ mod _iart_types_trait_helper {
 
     #[allow(unused)]
     pub struct IartDroppedDetails<'a> {
-        pub(crate) detail: Option<&'a Box<ErrorDetail>>,
+        pub detail: Option<&'a Box<ErrorDetail>>,
 
         #[cfg(feature = "allow-backtrace-logging")]
-        pub(crate) log: Option<&'a VecDeque<&'static Location<'static>>>,
+        pub log: Option<&'a VecDeque<&'static Location<'static>>>,
     }
 
     /// Iart (Infomation and Result Trace)
@@ -95,10 +95,10 @@ mod _iart_types_trait_helper {
 
     #[allow(unused)]
     pub struct IartDroppedDetails<'a, A: alloc::alloc::Allocator + Clone> {
-        pub(crate) detail: Option<&'a Box<ErrorDetail<A>, A>>,
+        pub detail: Option<&'a Box<ErrorDetail<A>, A>>,
 
         #[cfg(feature = "allow-backtrace-logging")]
-        pub(crate) log: Option<&'a VecDeque<&'static Location<'static>, A>>,
+        pub log: Option<&'a VecDeque<&'static Location<'static>, A>>,
     }
 
     /// Iart (Infomation and Result Trace)

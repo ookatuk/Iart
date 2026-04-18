@@ -18,8 +18,10 @@ pub mod events;
 pub mod iart_impl;
 #[cfg(test)]
 mod tests;
-pub mod types;
+mod types;
 mod utils;
+
+pub use types::*;
 
 #[cfg(all(feature = "core_error-support", feature = "std"))]
 compile_error!(
@@ -27,13 +29,12 @@ compile_error!(
      Please disable 'core_error-support' when building for std targets."
 );
 
-use crate::types::IartLogger;
 use crate::utils::const_str_to_usize;
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 #[allow(unused)]
-const BACK_TRACE_MAX: usize = {
+pub const BACK_TRACE_MAX: usize = {
     if let Some(val) = option_env!("IART_TRACE_MAX") {
         const_str_to_usize(val)
     } else {
@@ -45,7 +46,7 @@ const BACK_TRACE_MAX: usize = {
 /// first: When a new one arrives, if the limit is reached, it will skip over the old one instead of overwriting it.
 /// good: A system that caused the error is not deleted; instead, the old version that was used as an intermediary is deleted and a new version is installed.
 #[allow(unused)]
-const TRACE_REMOVE_TYPE: &str = {
+pub const TRACE_REMOVE_TYPE: &str = {
     if let Some(s) = option_env!("IART_TRACE_TYPE") {
         s
     } else {
@@ -55,7 +56,7 @@ const TRACE_REMOVE_TYPE: &str = {
 
 /// If the data is consecutive and originates from the same location, do not record it.
 #[allow(unused)]
-const TRACE_UNIQUE: bool = !cfg!(feature = "no-trace-dedup");
+pub const TRACE_UNIQUE: bool = !cfg!(feature = "no-trace-dedup");
 
 static HANDLER: AtomicPtr<()> = AtomicPtr::new(ptr::null_mut());
 
