@@ -1,0 +1,40 @@
+[package]
+name = "wirt"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+core-error = { version = "^0.0", default-features = false, optional = true }
+
+[dev-dependencies]
+spin = "^0.10"
+
+[features]
+default = ["std"]
+
+nightly = [
+    "for-nightly-likely-optimization",
+    "for-nightly-try-support",
+    "for-nightly-allocator-api-support",
+    "for-nightly-error-generic-member-access"
+]
+
+std = ["core-error/std"]
+
+for-nightly-likely-optimization = []
+for-nightly-try-support = []
+for-nightly-allocator-api-support = []
+for-nightly-error-generic-member-access = []
+
+no-trace-dedup = []
+
+allow-backtrace-logging = []
+allow-backtrace-logging-with-ok = ["allow-backtrace-logging"]
+
+check-unused-result = []
+check-unused-result-with-ok = ["check-unused-result"]
+
+error-can-have-item = []
+
+core_error-support = ["core-error"]
+ignore-handler-err = []
