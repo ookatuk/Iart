@@ -15,7 +15,7 @@
 extern crate alloc;
 extern crate core;
 pub mod events;
-pub mod iart_impl;
+mod iart_impl;
 #[cfg(test)]
 mod tests;
 mod types;

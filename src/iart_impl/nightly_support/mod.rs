@@ -1,6 +1,6 @@
-pub mod alloc_api;
+mod alloc_api;
 
 #[cfg(feature = "for-nightly-error-generic-member-access")]
-pub mod generic_member_access;
+mod generic_member_access;
 #[cfg(feature = "for-nightly-try-support")]
-pub mod try_api;
+mod try_api;
