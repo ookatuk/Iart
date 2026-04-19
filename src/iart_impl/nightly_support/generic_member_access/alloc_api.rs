@@ -4,7 +4,9 @@ use core::fmt::{Debug, Display};
 
 impl<A: alloc::alloc::Allocator + Clone + Debug> core::error::Error for ErrorDetail<A> {
     fn provide<'a>(&'a self, request: &mut core::error::Request<'a>) {
-        self.ty.provide(request);
+        if let Some(ty) = &self.ty {
+            ty.provide(request);
+        }
     }
 }
 

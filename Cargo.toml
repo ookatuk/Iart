@@ -1,5 +1,5 @@
 [package]
-name = "wirt"
+name = "iart"
 version = "0.1.0"
 edition = "2024"
 
@@ -10,7 +10,7 @@ core-error = { version = "^0.0", default-features = false, optional = true }
 spin = "^0.10"
 
 [features]
-default = ["std"]
+default = ["std", "allow-backtrace-logging", "check-unused-result"]
 
 nightly = [
     "for-nightly-likely-optimization",
@@ -19,7 +19,7 @@ nightly = [
     "for-nightly-error-generic-member-access"
 ]
 
-std = ["core-error/std"]
+std = ["core-error/std", "thiserror/std", "anyhow/std"]
 
 for-nightly-likely-optimization = []
 for-nightly-try-support = []

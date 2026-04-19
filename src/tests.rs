@@ -25,15 +25,15 @@ impl Display for MyError {
 }
 impl IartErr for MyError {
     #[cfg(not(feature = "for-nightly-allocator-api-support"))]
-    fn clone_box(&self) -> Box<dyn IartErr> {
-        Box::new(MyError)
+    fn clone_box(&self) -> Box<dyn IartErr + Send + Sync> {
+        Box::new(self.clone())
     }
     #[cfg(feature = "for-nightly-allocator-api-support")]
     fn clone_box_in<'a>(&self, alloc: Global) -> Box<dyn IartErr<Global> + 'a + Send + Sync, Global>
     where
         Self: 'a,
     {
-        Box::new_in(MyError, alloc)
+        Box::new_in(self.clone(), alloc)
     }
 }
 
@@ -249,6 +249,7 @@ fn test_allocator_ok() {
     let _guard = TEST_LOG_LOCK.lock();
 
     let w = Iart::Ok_in(42, Global);
+    assert!(w.is_ok());
     assert_eq!(w.unwrap(), 42);
 }
 

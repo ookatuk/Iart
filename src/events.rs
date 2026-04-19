@@ -8,6 +8,8 @@ pub enum AutoRequestType {
     GetErr,
     Unwrap,
     UnwrapErr,
+    TryDownCastFail,
+    TryDownCastUsed,
 }
 
 #[non_exhaustive]

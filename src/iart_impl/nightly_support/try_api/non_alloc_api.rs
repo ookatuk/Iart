@@ -37,6 +37,7 @@ where
                 log: self.log.take(),
                 #[cfg(feature = "error-can-have-item")]
                 err_item: None,
+                trans_fns: self.trans_fns,
             }),
             None => panic!("Iart: try branch called after consumption"),
         }
@@ -63,6 +64,7 @@ where
             log,
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
+            trans_fns: residual.trans_fns,
         }
     }
 }

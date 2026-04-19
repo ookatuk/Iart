@@ -22,7 +22,7 @@ use alloc::collections::VecDeque;
 use core::panic::Location;
 
 impl<'t, T: IartErr + ?Sized + 't> IartErr for &'t T {
-    fn clone_box(&self) -> Box<dyn IartErr> {
+    fn clone_box(&self) -> Box<dyn IartErr + Send + Sync> {
         (**self).clone_box()
     }
 }
@@ -34,7 +34,7 @@ impl Clone for Box<dyn IartErr> {
 }
 
 impl IartErr for DummyErr {
-    fn clone_box(&self) -> Box<dyn IartErr> {
+    fn clone_box(&self) -> Box<dyn IartErr + Send + Sync> {
         Box::new(DummyErr {})
     }
 }
@@ -50,17 +50,15 @@ impl<'a> IartDroppedDetails<'a> {
     }
 }
 
-impl ErrorDetail {
-    pub fn new(ty: Box<dyn IartErr + Send + Sync>, desc: Option<Cow<'static, str>>) -> Self {
-        Self { ty, desc }
-    }
-}
-
 impl Clone for ErrorDetail {
     fn clone(&self) -> Self {
+        let ty: Option<Box<dyn IartErr + Send + Sync>> =
+            { self.ty.as_ref().map(|b| b.clone_box()) };
+
         Self {
-            ty: self.ty.clone_box(),
+            ty,
             desc: self.desc.clone(),
+            trans_fns: self.trans_fns,
         }
     }
 }
@@ -118,6 +116,7 @@ impl<Item> Iart<Item> {
             },
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
+            trans_fns: None,
         }
     }
 
@@ -125,8 +124,14 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    pub fn Err(error: &'static dyn IartErr, desc: Option<&'static str>) -> Self {
-        let detail = Box::new(ErrorDetail::new(Box::new(error), desc.map(Cow::Borrowed)));
+    pub fn Err<ERR: IartErr + 'static>(error: &ERR, desc: Option<&'static str>) -> Self {
+        let to_any = jen_fns!(ERR);
+
+        let detail = Box::new(ErrorDetail::new(
+            error.clone_box(),
+            desc.map(Cow::Borrowed),
+            to_any,
+        ));
         Self {
             data: Some(Err(detail)),
             handled: false,
@@ -138,6 +143,7 @@ impl<Item> Iart<Item> {
             },
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
+            trans_fns: Some(to_any),
         }
     }
 
@@ -145,8 +151,13 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    pub fn Err_string(error: &'static dyn IartErr, desc: Option<String>) -> Self {
-        let detail = Box::new(ErrorDetail::new(Box::new(error), desc.map(Cow::Owned)));
+    pub fn Err_string<ERR: IartErr + 'static>(error: &ERR, desc: Option<String>) -> Self {
+        let to_any = jen_fns!(ERR);
+        let detail = Box::new(ErrorDetail::new(
+            error.clone_box(),
+            desc.map(Cow::Owned),
+            to_any,
+        ));
         Self {
             data: Some(Err(detail)),
             handled: false,
@@ -158,6 +169,7 @@ impl<Item> Iart<Item> {
             },
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
+            trans_fns: Some(to_any),
         }
     }
 
@@ -325,9 +337,9 @@ impl<Item> Iart<Item> {
 
     #[inline]
     #[track_caller]
-    pub fn from_option(
+    pub fn from_option<ERR: IartErr + 'static>(
         data: Option<Item>,
-        e_type: &'static dyn IartErr,
+        e_type: &ERR,
         detail: Option<&'static str>,
     ) -> Self {
         if let Some(item) = data {
@@ -369,6 +381,7 @@ impl<Item: Clone> Clone for Iart<Item> {
             log: self.log.clone(),
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
+            trans_fns: self.trans_fns,
         }
     }
 }
@@ -386,6 +399,24 @@ impl<T> Default for Iart<T> {
             },
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
+            trans_fns: Some(jen_fns!(DummyErr)),
+        }
+    }
+}
+
+impl ErrorDetail {
+    pub fn new(
+        ty: Box<dyn IartErr + Send + Sync>,
+        desc: Option<Cow<'static, str>>,
+        trans_fns: (
+            fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
+            fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
+        ),
+    ) -> Self {
+        Self {
+            ty: Some(ty),
+            desc,
+            trans_fns,
         }
     }
 }

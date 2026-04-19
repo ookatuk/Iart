@@ -4,9 +4,20 @@ pub struct ErrorDetail<
     #[cfg(feature = "for-nightly-allocator-api-support")] A: alloc::alloc::Allocator + Clone = alloc::alloc::Global,
 > {
     #[cfg(feature = "for-nightly-allocator-api-support")]
-    pub(crate) ty: Box<dyn IartErr<A> + Send + Sync, A>,
+    pub(crate) ty: Option<Box<dyn IartErr<A> + Send + Sync, A>>,
     #[cfg(not(feature = "for-nightly-allocator-api-support"))]
-    pub(crate) ty: Box<dyn IartErr + Send + Sync>,
+    pub(crate) ty: Option<Box<dyn IartErr + Send + Sync>>,
+
+    #[cfg(feature = "for-nightly-allocator-api-support")]
+    pub(crate) trans_fns: (
+        fn(Box<dyn IartErr<A> + Send + Sync, A>) -> Box<dyn core::any::Any + Send + Sync, A>,
+        fn(Box<dyn core::any::Any + Send + Sync, A>) -> Box<dyn IartErr<A> + Send + Sync, A>,
+    ),
+    #[cfg(not(feature = "for-nightly-allocator-api-support"))]
+    pub(crate) trans_fns: (
+        fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
+        fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
+    ),
 
     pub(crate) desc: Option<Cow<'static, str>>,
 }
@@ -28,13 +39,13 @@ mod _iart_types_trait_helper {
     #[cfg(not(feature = "for-nightly-error-generic-member-access"))]
     #[must_use]
     pub trait IartErr: Debug + Display + Send + Sync {
-        fn clone_box(&self) -> Box<dyn IartErr>;
+        fn clone_box(&self) -> Box<dyn IartErr + Send + Sync>;
     }
 
     #[cfg(feature = "for-nightly-error-generic-member-access")]
     #[must_use]
     pub trait IartErr: Debug + Display + core::error::Error + Send + Sync {
-        fn clone_box(&self) -> Box<dyn IartErr>;
+        fn clone_box(&self) -> Box<dyn IartErr + Send + Sync>;
     }
 
     #[allow(unused)]
@@ -57,6 +68,11 @@ mod _iart_types_trait_helper {
 
         #[cfg(feature = "allow-backtrace-logging")]
         pub(crate) log: Option<VecDeque<&'static Location<'static>>>,
+
+        pub(crate) trans_fns: Option<(
+            fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
+            fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
+        )>,
     }
 }
 
@@ -76,6 +92,8 @@ mod _iart_types_trait_helper {
     #[must_use]
     pub trait IartErr<A: Allocator + Clone = alloc::alloc::Global>:
         Debug + Display + core::error::Error
+    where
+        Self: 'static,
     {
         fn clone_box_in<'a>(&self, alloc: A) -> Box<dyn IartErr<A> + 'a + Send + Sync, A>
         where
@@ -115,6 +133,10 @@ mod _iart_types_trait_helper {
         pub(crate) err_item: Option<Item>,
 
         pub(crate) allocator: A,
+        pub(crate) trans_fns: Option<(
+            fn(Box<dyn IartErr<A> + Send + Sync, A>) -> Box<dyn core::any::Any + Send + Sync, A>,
+            fn(Box<dyn core::any::Any + Send + Sync, A>) -> Box<dyn IartErr<A> + Send + Sync, A>,
+        )>,
     }
 }
 

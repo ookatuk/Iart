@@ -36,6 +36,7 @@ impl<Item: Debug, A: alloc::alloc::Allocator + Clone + 'static + Default> Try fo
                 allocator: self.allocator.clone(),
                 #[cfg(feature = "error-can-have-item")]
                 err_item: None,
+                trans_fns: self.trans_fns,
             }),
             None => panic!("Iart: try branch called after consumption"),
         }
@@ -59,6 +60,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static + Default> FromResidual<
             allocator: alloc,
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
+            trans_fns: residual.trans_fns,
         }
     }
 }

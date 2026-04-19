@@ -16,10 +16,10 @@ use alloc::collections::VecDeque;
 #[cfg(feature = "allow-backtrace-logging")]
 use core::panic::Location;
 
-impl<'t, T, A> IartErr<A> for &'t T
+impl<T, A> IartErr<A> for &'static T
 where
-    T: IartErr<A> + ?Sized + 't,
-    A: Allocator + Clone + 't,
+    T: IartErr<A> + ?Sized + 'static,
+    A: Allocator + Clone + 'static,
 {
     fn clone_box_in<'a>(&self, alloc: A) -> Box<dyn IartErr<A> + 'a + Send + Sync, A>
     where
@@ -59,24 +59,44 @@ impl<'a, A: alloc::alloc::Allocator + Clone> IartDroppedDetails<'a, A> {
 impl<A: alloc::alloc::Allocator + Clone> ErrorDetail<A> {
     pub fn default_in(alloc: A) -> ErrorDetail<A> {
         Self {
-            ty: Box::new_in(DummyErr {}, alloc),
+            ty: Some(Box::new_in(DummyErr {}, alloc)),
             desc: None,
+            trans_fns: jen_fns!(DummyErr, A),
         }
     }
 }
 
 impl<A: alloc::alloc::Allocator + Clone> ErrorDetail<A> {
-    pub fn new(ty: Box<dyn IartErr<A> + Send + Sync, A>, desc: Option<Cow<'static, str>>) -> Self {
-        Self { ty, desc }
+    pub fn new(
+        ty: Box<dyn IartErr<A> + Send + Sync, A>,
+        desc: Option<Cow<'static, str>>,
+        to_any: (
+            fn(Box<dyn IartErr<A> + Send + Sync, A>) -> Box<dyn core::any::Any + Send + Sync, A>,
+            fn(Box<dyn core::any::Any + Send + Sync, A>) -> Box<dyn IartErr<A> + Send + Sync, A>,
+        ),
+    ) -> Self {
+        Self {
+            ty: Some(ty),
+            desc,
+            trans_fns: to_any,
+        }
     }
 }
 
 impl<A: alloc::alloc::Allocator + Clone + 'static> Clone for ErrorDetail<A> {
     fn clone(&self) -> Self {
-        let alloc = Box::allocator(&self.ty).clone();
         Self {
-            ty: self.ty.clone_box_in(alloc),
+            ty: {
+                if let Some(ty) = &self.ty {
+                    let alloc = Box::allocator(&ty).clone();
+                    Some(ty.clone_box_in(alloc))
+                } else {
+                    cold_path();
+                    None
+                }
+            },
             desc: self.desc.clone(),
+            trans_fns: self.trans_fns,
         }
     }
 }
@@ -136,8 +156,8 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    pub fn Err(
-        error: &'static (dyn IartErr<A> + Send + Sync),
+    pub fn Err<ERR: IartErr<A> + Send + Sync + 'static>(
+        error: &ERR,
         desc: Option<&'static str>,
     ) -> Iart<Item, A>
     where
@@ -155,6 +175,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             allocator: allocator,
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
+            trans_fns: None,
         };
         #[cfg(feature = "allow-backtrace-logging")]
         let res = {
@@ -170,6 +191,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                 log: Some(log),
                 #[cfg(feature = "error-can-have-item")]
                 err_item: None,
+                trans_fns: None,
             }
         };
         res
@@ -178,89 +200,66 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    pub fn Err_in(
-        error: &'static (dyn IartErr<A> + Send + Sync),
+    pub fn Err_in<ERR: IartErr<A> + Send + Sync + 'static>(
+        error: &ERR,
         desc: Option<&'static str>,
         allocator: A,
     ) -> Iart<Item, A> {
-        #[cfg(not(feature = "allow-backtrace-logging"))]
-        let res = Iart::<Item, A> {
+        let to_any = jen_fns!(ERR, A);
+
+        Iart::<Item, A> {
             data: Some(Err(Box::new_in(
                 ErrorDetail::<A>::new(
-                    Box::new_in(error, allocator.clone()),
+                    error.clone_box_in(allocator.clone()),
                     desc.map(|x| Cow::Borrowed(x)),
+                    to_any,
                 ),
                 allocator.clone(),
             ))),
             handled: false,
-            allocator,
+            allocator: allocator.clone(),
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
-        };
-
-        #[cfg(feature = "allow-backtrace-logging")]
-        let res = {
-            let mut log = VecDeque::new_in(allocator.clone());
-            log.push_back(Location::caller());
-            Self {
-                data: Some(Err(Box::new_in(
-                    ErrorDetail::<A>::new(
-                        Box::new_in(error, allocator.clone()),
-                        desc.map(|x| Cow::Borrowed(x)),
-                    ),
-                    allocator.clone(),
-                ))),
-                handled: false,
-                log: Some(log),
-                allocator,
-                #[cfg(feature = "error-can-have-item")]
-                err_item: None,
-            }
-        };
-
-        res
+            #[cfg(feature = "allow-backtrace-logging")]
+            log: {
+                let mut log = VecDeque::new_in(allocator.clone());
+                log.push_back(core::panic::Location::caller());
+                Some(log)
+            },
+            trans_fns: Some(to_any),
+        }
     }
 
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    pub fn Err_string_in(
-        error: &'static (dyn IartErr<A> + Send + Sync),
-        desc: Option<String>,
-        allocator: A,
-    ) -> Iart<Item, A> {
-        #[cfg(not(feature = "allow-backtrace-logging"))]
-        let res = Self {
-            data: Some(Err(Box::new_in(
-                ErrorDetail::new(
-                    Box::new_in(error, allocator.clone()),
-                    desc.map(|x| Cow::Owned(x)),
-                ),
-                allocator.clone(),
-            ))),
-            handled: false,
-            allocator: allocator,
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
-        };
-
-        #[cfg(feature = "allow-backtrace-logging")]
+    pub fn Err_string_in<ERR>(error: &ERR, desc: Option<String>, allocator: A) -> Iart<Item, A>
+    where
+        ERR: IartErr<A> + Send + Sync + 'static,
+    {
         let res = {
-            let mut log = VecDeque::new_in(allocator.clone());
-            log.push_back(Location::caller());
+            let to_any = jen_fns!(ERR, A);
+
             Self {
                 data: Some(Err(Box::new_in(
                     ErrorDetail::new(
-                        Box::new_in(error, allocator.clone()),
+                        error.clone_box_in(allocator.clone()),
                         desc.map(|x| Cow::Owned(x)),
+                        to_any,
                     ),
                     allocator.clone(),
                 ))),
                 handled: false,
-                log: Some(log),
-                allocator,
+                allocator: allocator.clone(),
                 #[cfg(feature = "error-can-have-item")]
                 err_item: None,
+                #[cfg(feature = "allow-backtrace-logging")]
+                log: {
+                    let mut log = VecDeque::new_in(allocator);
+                    log.push_back(Location::caller());
+                    Some(log)
+                },
+                trans_fns: Some(to_any),
             }
         };
 
@@ -271,8 +270,8 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    pub fn Err_string(
-        error: &'static (dyn IartErr<A> + Send + Sync),
+    pub fn Err_string<ERR: IartErr<A> + Send + Sync + 'static>(
+        error: &ERR,
         desc: Option<String>,
     ) -> Iart<Item, A>
     where
@@ -434,9 +433,9 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
 
     #[inline]
     #[track_caller]
-    pub fn from_option_in(
+    pub fn from_option_in<ERR: IartErr<A> + Send + Sync + 'static>(
         data: Option<Item>,
-        e_type: &'static (dyn IartErr<A> + Send + Sync),
+        e_type: &ERR,
         detail: Option<&'static str>,
         allocator: A,
     ) -> Iart<Item, A> {
@@ -450,9 +449,9 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
 
     #[inline]
     #[track_caller]
-    pub fn from_option(
+    pub fn from_option<ERR: IartErr<A> + Send + Sync + 'static>(
         data: Option<Item>,
-        e_type: &'static (dyn IartErr<A> + Send + Sync),
+        e_type: &ERR,
         detail: Option<&'static str>,
     ) -> Iart<Item, A>
     where
@@ -533,6 +532,7 @@ impl<Item: Clone, A: alloc::alloc::Allocator + Clone + 'static> Clone for Iart<I
             allocator: self.allocator.clone(),
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
+            trans_fns: self.trans_fns,
         }
     }
 }
@@ -556,6 +556,7 @@ impl<T, A: alloc::alloc::Allocator + Clone + 'static + Default> Default for Iart
                 allocator: alloc,
                 #[cfg(feature = "error-can-have-item")]
                 err_item: None,
+                trans_fns: Some(jen_fns!(DummyErr, A)),
             }
         };
         #[cfg(not(feature = "allow-backtrace-logging"))]
@@ -568,6 +569,7 @@ impl<T, A: alloc::alloc::Allocator + Clone + 'static + Default> Default for Iart
             allocator: alloc,
             #[cfg(feature = "error-can-have-item")]
             err_item: None,
+            trans_fns: Some(jen_fns!(DummyErr, A)),
         };
 
         res

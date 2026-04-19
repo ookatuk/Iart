@@ -14,12 +14,15 @@
 
 extern crate alloc;
 extern crate core;
+
+#[macro_use]
+mod utils;
+
 pub mod events;
 mod iart_impl;
 #[cfg(test)]
 mod tests;
 mod types;
-mod utils;
 
 pub use types::*;
 
