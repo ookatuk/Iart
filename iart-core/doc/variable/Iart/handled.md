@@ -1,0 +1,1 @@
+A flag indicating whether this [`Iart`] has been processed.

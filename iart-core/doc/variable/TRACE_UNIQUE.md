@@ -1,0 +1,1 @@
+If the data is consecutive and originates from the same location, do not record it.

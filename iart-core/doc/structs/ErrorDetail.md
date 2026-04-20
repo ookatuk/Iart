@@ -1,0 +1,1 @@
+A structure containing a description and error ([`IartErr`]) used when an error occurs in [`Iart`].

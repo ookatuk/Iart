@@ -1,0 +1,50 @@
+[package]
+name = "iart-core"
+
+version.workspace = true
+edition.workspace = true
+description.workspace = true
+documentation.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+
+[dependencies]
+core-error = { version = "^0.0", default-features = false, optional = true }
+
+[dev-dependencies]
+spin.workspace = true
+
+[features]
+default = ["std", "allow-backtrace-logging", "check-unused-result", "enable-default-handler"]
+
+nightly = [
+    "for-nightly-likely-optimization",
+    "for-nightly-try-support",
+    # "for-nightly-allocator-api-support",
+    "for-nightly-error-generic-member-access"
+]
+
+std = ["core-error/std"]
+
+for-nightly-likely-optimization = []
+for-nightly-error-generic-member-access = []
+for-nightly-try-support = []
+
+no-trace-dedup = []
+
+allow-backtrace-logging = []
+allow-backtrace-logging-with-ok = ["allow-backtrace-logging"]
+
+check-unused-result = []
+check-unused-result-with-ok = ["check-unused-result"]
+danger-allow-panic-if-unused = ["check-unused-result-with-ok"]
+
+error-can-have-item = []
+
+core_error-support = ["core-error"]
+ignore-handler-err = []
+enable-default-handler = ["std"]
+
+# TODO
+for-nightly-allocator-api-support = []

@@ -1,0 +1,1 @@
+This module defines the structure that is passed as `event` when registered as an Iart handler.

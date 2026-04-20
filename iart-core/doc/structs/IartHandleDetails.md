@@ -1,0 +1,1 @@
+A structure of information passed to the handler.
