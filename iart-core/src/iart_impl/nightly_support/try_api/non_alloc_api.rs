@@ -1,3 +1,5 @@
+#![doc = include_str!("../../../../doc/modules/non_alloc_api.md")]
+
 use crate::IartErr;
 use crate::events::{AutoRequestType, IartEvent};
 use crate::types::Iart;
@@ -18,6 +20,7 @@ where
     }
 
     #[track_caller]
+    #[doc = include_str!("../../../../doc/fn/Iart/branch.md")]
     fn branch(mut self) -> ControlFlow<Self::Residual, Self::Output> {
         self.send_log();
 
@@ -26,16 +29,19 @@ where
                 .unwrap_unchecked()
         };
 
-        match self.data.take() {
-            Some(Ok(item)) => {
-                self.handled = true;
-                ControlFlow::Continue(item)
-            }
-            Some(Err(err)) => {
-                let res: Iart<Infallible> = self;
-                res
-            }
-            None => panic!("Iart: try branch called after consumption"),
+        if self.is_ok().unwrap_or(false) {
+            self.handled = true;
+            ControlFlow::Continue(self.data.take().unwrap().unwrap())
+        } else {
+            let clos = |_| -> Infallible { unreachable!() };
+
+            #[cfg(feature = "error-can-have-item")]
+            let res: Iart<Infallible> = self.map_err_item(clos, clos);
+
+            #[cfg(not(feature = "error-can-have-item"))]
+            let res: Iart<Infallible> = self.map(clos);
+
+            ControlFlow::Break(res)
         }
     }
 }
@@ -49,19 +55,7 @@ where
         residual.send_log();
         residual.handled = true;
 
-        let data = residual.data.take();
-        #[cfg(feature = "allow-backtrace-logging")]
-        let log = residual.log.take();
-
-        Self {
-            data: data.map(|r| Err(unsafe { r.unwrap_err_unchecked() })),
-            handled: false,
-            #[cfg(feature = "allow-backtrace-logging")]
-            log,
-            #[cfg(feature = "error-can-have-item")]
-            err_item: residual.err_item.take(),
-            trans_fns: residual.trans_fns,
-        }
+        residual.map(|_| unreachable!())
     }
 }
 

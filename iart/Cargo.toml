@@ -34,7 +34,6 @@ danger-allow-panic-if-unused = ["iart-core/danger-allow-panic-if-unused"]
 error-can-have-item = ["iart-core/error-can-have-item"]
 
 core_error-support = ["iart-core/core_error-support"]
-ignore-handler-err = ["iart-core/ignore-handler-err"]
 enable-default-handler = ["iart-core/enable-default-handler"]
 
 # TODO Features

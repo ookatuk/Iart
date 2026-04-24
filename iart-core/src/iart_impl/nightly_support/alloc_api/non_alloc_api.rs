@@ -1,3 +1,5 @@
+#![doc = include_str!("../../../../doc/modules/non_alloc_api.md")]
+
 use crate::HANDLER;
 use crate::events::AutoRequestType;
 use crate::events::IartEvent;
@@ -59,7 +61,8 @@ impl core::fmt::Display for ErrorDetail {
 }
 
 impl<Item> Iart<Item> {
-    pub(crate) fn send_log_to_handler<const ERR_ON_PANIC: bool>(
+    #[doc = include_str!("../../../../doc/fn/Iart/send_log_to_handler.md")]
+    pub(crate) fn send_log_to_handler<const NO_RET_ERR: bool>(
         &self,
         event: IartEvent,
     ) -> core::fmt::Result {
@@ -76,7 +79,7 @@ impl<Item> Iart<Item> {
                 #[cfg(feature = "allow-backtrace-logging")]
                 log: self.log.as_ref(),
                 is_err: if self.data.is_some() {
-                    Some(self.is_err())
+                    self.is_err()
                 } else {
                     None
                 },
@@ -84,11 +87,8 @@ impl<Item> Iart<Item> {
 
             let res = logger(event, details);
 
-            if ERR_ON_PANIC {
-                #[cfg(feature = "ignore-handler-err")]
+            if NO_RET_ERR {
                 let _ = res;
-                #[cfg(not(feature = "ignore-handler-err"))]
-                res.expect("failed to format Iart");
                 Ok(())
             } else {
                 res
@@ -100,6 +100,7 @@ impl<Item> Iart<Item> {
 
     #[inline]
     #[allow(non_snake_case)]
+    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Ok.md")]
     pub fn Ok(item: Item) -> Self {
         Self {
             data: Some(Ok(item)),
@@ -122,14 +123,13 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
+    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err.md")]
     pub fn Err<ERR: IartErr + 'static>(error: ERR, desc: impl Into<Option<&'static str>>) -> Self {
         let to_any = jen_fns!(ERR);
 
-        let detail = Box::new(ErrorDetail::new(
-            Box::new(error),
-            desc.into().map(Cow::Borrowed),
-            to_any,
-        ));
+        let detail = Box::new(unsafe {
+            ErrorDetail::new(Box::new(error), desc.into().map(Cow::Borrowed), to_any)
+        });
 
         Self {
             data: Some(Err(detail)),
@@ -150,13 +150,12 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
+    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err_string.md")]
     pub fn Err_string<ERR: IartErr + 'static>(error: ERR, desc: impl Into<Option<String>>) -> Self {
         let to_any = jen_fns!(ERR);
-        let detail = Box::new(ErrorDetail::new(
-            Box::new(error),
-            desc.into().map(Cow::Owned),
-            to_any,
-        ));
+        let detail = Box::new(unsafe {
+            ErrorDetail::new(Box::new(error), desc.into().map(Cow::Owned), to_any)
+        });
 
         Self {
             data: Some(Err(detail)),
@@ -175,6 +174,7 @@ impl<Item> Iart<Item> {
 
     #[inline]
     #[track_caller]
+    #[doc = include_str!("../../../../doc/fn/Iart/ok.md")]
     pub fn ok(mut self) -> Result<Item, Self> {
         self.handled = true;
 
@@ -205,6 +205,7 @@ impl<Item> Iart<Item> {
     #[inline]
     #[must_use]
     #[track_caller]
+    #[doc = include_str!("../../../../doc/fn/Iart/err.md")]
     pub fn err(mut self) -> Result<(Box<ErrorDetail>, Option<Item>), Self> {
         self.handled = true;
 
@@ -240,6 +241,7 @@ impl<Item> Iart<Item> {
     #[inline]
     #[track_caller]
     #[must_use]
+    #[doc = include_str!("../../../../doc/fn/Iart/unwrap.md")]
     pub fn unwrap(mut self) -> Item {
         self.send_log();
         self.handled = true;
@@ -261,6 +263,7 @@ impl<Item> Iart<Item> {
 
     #[track_caller]
     #[must_use]
+    #[doc = include_str!("../../../../doc/fn/Iart/expect.md")]
     pub fn expect(mut self, msg: &str) -> Item {
         self.handled = true;
 
@@ -280,6 +283,7 @@ impl<Item> Iart<Item> {
 
     #[track_caller]
     #[must_use]
+    #[doc = include_str!("../../../../doc/fn/Iart/unwrap_err.md")]
     pub fn unwrap_err(mut self) -> (Box<ErrorDetail>, Option<Item>)
     where
         Item: Debug,
@@ -310,6 +314,7 @@ impl<Item> Iart<Item> {
     #[inline]
     #[track_caller]
     #[must_use]
+    #[doc = include_str!("../../../../doc/fn/Iart/unwrap_unchecked.md")]
     pub unsafe fn unwrap_unchecked(mut self) -> Item {
         self.handled = true;
 
@@ -324,6 +329,7 @@ impl<Item> Iart<Item> {
     }
 
     #[track_caller]
+    #[doc = include_str!("../../../../doc/fn/Iart/send_log.md")]
     pub fn send_log(&mut self) {
         #[cfg(feature = "allow-backtrace-logging")]
         {
@@ -370,6 +376,7 @@ impl<Item> Iart<Item> {
 
     #[inline]
     #[track_caller]
+    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/from_option.md")]
     pub fn from_option<ERR: IartErr + 'static>(
         data: Option<Item>,
         e_type: ERR,
@@ -384,27 +391,25 @@ impl<Item> Iart<Item> {
     }
 
     #[inline]
-    pub fn has_data(&self) -> bool {
-        self.data.is_some()
-    }
-
-    #[inline]
     #[must_use]
-    pub const fn is_err(&self) -> bool {
+    #[doc = include_str!("../../../../doc/fn/Iart/is_err.md")]
+    pub const fn is_err(&self) -> Option<bool> {
         if let Some(data) = self.data.as_ref() {
-            data.is_err()
+            Some(data.is_err())
         } else {
             cold_path();
             debug_assert!(false, "Iart: is_err called after consumption");
-            false
+            None
         }
     }
 
     #[track_caller]
     #[cfg(feature = "error-can-have-item")]
-    pub fn map_err_item<F, NewItem>(mut self, fns: F, item_fns: F) -> Result<Iart<NewItem>, Self>
+    #[doc = include_str!("../../../../doc/fn/Iart/map_err_item.md")]
+    pub fn map_err_item<F, G, NewItem>(mut self, fns: F, item_fns: G) -> Iart<NewItem>
     where
         F: FnOnce(Item) -> NewItem,
+        G: FnOnce(Item) -> NewItem,
     {
         self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Map))
             .unwrap();
@@ -418,21 +423,36 @@ impl<Item> Iart<Item> {
             }
 
             let item = self.err_item.take();
-            let item = item.map(item_fns).into();
+            let item = item.map(item_fns);
             res.err_item = item;
 
             res.handled = false;
             self.handled = true;
 
-            Ok(res)
+            res
         } else {
             cold_path();
-            Err(self)
+
+            let res = Iart::<NewItem> {
+                handled: false,
+                data: None,
+                #[cfg(feature = "error-can-have-item")]
+                err_item: None,
+                #[cfg(feature = "allow-backtrace-logging")]
+                log: self.log.take(),
+                trans_fns: None,
+            };
+
+            self.handled = true;
+
+            res
         }
     }
 
     #[track_caller]
-    pub fn map<F, NewItem>(mut self, fns: F) -> Result<Iart<NewItem>, Self>
+    #[allow(rustdoc::broken_intra_doc_links)] // Because it should be correct but produces an error.
+    #[doc = include_str!("../../../../doc/fn/Iart/map.md")]
+    pub fn map<F, NewItem>(mut self, fns: F) -> Iart<NewItem>
     where
         F: FnOnce(Item) -> NewItem,
     {
@@ -450,10 +470,23 @@ impl<Item> Iart<Item> {
             res.handled = false;
             self.handled = true;
 
-            Ok(res)
+            res
         } else {
             cold_path();
-            Err(self)
+
+            let res = Iart::<NewItem> {
+                handled: false,
+                data: None,
+                #[cfg(feature = "error-can-have-item")]
+                err_item: None,
+                #[cfg(feature = "allow-backtrace-logging")]
+                log: self.log.take(),
+                trans_fns: None,
+            };
+
+            self.handled = true;
+
+            res
         }
     }
 }
@@ -508,12 +541,13 @@ impl<T> Default for Iart<T> {
 }
 
 impl ErrorDetail {
-    pub fn new(
+    #[doc = include_str!("../../../../doc/fn/ErrorDetail/new.md")]
+    pub unsafe fn new(
         ty: Box<dyn IartErr + Send + Sync>,
         desc: Option<Cow<'static, str>>,
         trans_fns: (
-            fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-            fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
+            unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
+            unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
         ),
     ) -> Self {
         Self {

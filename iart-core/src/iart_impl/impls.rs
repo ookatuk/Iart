@@ -1,6 +1,6 @@
 use crate::IartErr;
-use crate::events::AutoRequestType::{TryDownCastFail, TryDownCastUsed};
-use crate::events::{AutoRequestType, IartEvent};
+use crate::events::AutoRequestType::{ToResult, ToResultFail, TryDownCastFail, TryDownCastUsed};
+use crate::events::IartEvent;
 use crate::types::{DummyErr, ErrorDetail, Iart};
 use crate::utils::{cold_path, unlikely};
 use alloc::boxed::Box;
@@ -18,48 +18,47 @@ impl Default for ErrorDetail {
         }
     }
 }
+
 impl ErrorDetail {
-    pub fn try_cast_err<T: 'static>(&mut self) -> Option<Box<T>> {
+    #[must_use]
+    #[doc = include_str!("../../doc/fn/ErrorDetail/try_cast_err.md")]
+    pub unsafe fn try_cast_err<T: 'static>(&mut self) -> Option<Box<T>> {
         let data = self.ty.take()?;
-        let res = (self.trans_fns.0)(data);
-        if unlikely(!res.is::<T>()) {
-            self.ty = Some((self.trans_fns.1)(res));
-            None
-        } else {
-            match res.downcast::<T>() {
-                Ok(t) => Some(t),
-                Err(item) => {
-                    self.ty = Some((self.trans_fns.1)(item));
-                    None
-                }
+        let res = unsafe { (self.trans_fns.0)(data) };
+        match res.downcast::<T>() {
+            Ok(t) => Some(t),
+            Err(item) => {
+                self.ty = Some(unsafe { (self.trans_fns.1)(item) });
+                None
             }
         }
     }
 }
 
-impl<Item> Iart<Item> {
+impl<Item: std::fmt::Debug> Iart<Item> {
     #[inline]
     #[must_use]
-    pub const fn is_ok(&self) -> bool {
+    #[doc = include_str!("../../doc/fn/Iart/is_ok.md")]
+    pub const fn is_ok(&self) -> Option<bool> {
         if let Some(data) = self.data.as_ref() {
-            data.is_ok()
+            Some(data.is_ok())
         } else {
             cold_path();
             debug_assert!(false, "Iart: is_ok called after consumption");
-            false
+            None
         }
     }
 
     #[inline]
     #[must_use]
     #[track_caller]
-    pub fn get_error_desc(mut self) -> Option<Box<ErrorDetail>> {
-        self.handled = true;
-
-        self.send_log();
-
-        match self.data.take() {
-            Some(data) => data.as_ref().err().cloned(),
+    #[doc = include_str!("../../doc/fn/Iart/peak_err.md")]
+    pub const fn peak_err(&self) -> Option<&Box<ErrorDetail>> {
+        match self.data.as_ref() {
+            Some(data) => match data {
+                Ok(_) => None,
+                Err(item) => Some(item),
+            },
             None => {
                 cold_path();
                 debug_assert!(false, "Iart: have_warn called after consumption");
@@ -69,11 +68,81 @@ impl<Item> Iart<Item> {
     }
 
     #[track_caller]
-    pub fn try_downcast<T: 'static>(mut self) -> Result<(T, Box<ErrorDetail>), Self>
+    #[doc = include_str!("../../doc/fn/Iart/to_result.md")]
+    pub unsafe fn to_result<T: 'static>(
+        mut self,
+    ) -> Result<
+        (
+            Result<(), (T, Box<ErrorDetail>)>,
+            Option<Item>,
+            Option<VecDeque<&'static Location<'static>>>,
+        ),
+        Self,
+    >
     where
         Item: Debug,
     {
-        if unlikely(self.is_ok()) {
+        self.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResult))
+            .unwrap();
+
+        let log = self.log.take();
+        #[cfg(feature = "error-can-have-item")]
+        let err_item = self.err_item.take();
+        #[cfg(not(feature = "error-can-have-item"))]
+        let err_item = None;
+
+        self.handled = true;
+
+        match self.is_ok() {
+            Some(false) => match unsafe { self.try_downcast::<T>() } {
+                Err(mut me) => {
+                    cold_path();
+                    me.log = log;
+                    #[cfg(feature = "error-can-have-item")]
+                    {
+                        me.err_item = err_item;
+                    }
+
+                    me.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResultFail))
+                        .unwrap();
+
+                    me.handled = false;
+
+                    Err(me)
+                }
+                Ok(item) => Ok((Err(item), err_item, log)),
+            },
+            Some(true) => {
+                let res = unsafe { self.data.take().unwrap_unchecked().unwrap_unchecked() };
+                Ok((Ok(()), Some(res), log))
+            }
+            None => {
+                cold_path();
+
+                self.log = log;
+
+                #[cfg(feature = "error-can-have-item")]
+                {
+                    self.err_item = err_item;
+                }
+
+                self.handled = false;
+
+                self.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResultFail))
+                    .unwrap();
+
+                Err(self)
+            }
+        }
+    }
+
+    #[track_caller]
+    #[doc = include_str!("../../doc/fn/Iart/try_downcast.md")]
+    pub unsafe fn try_downcast<T: 'static>(mut self) -> Result<(T, Box<ErrorDetail>), Self>
+    where
+        Item: Debug,
+    {
+        if unlikely(self.is_ok().unwrap_or(false)) {
             return Err(self);
         }
 
@@ -92,102 +161,44 @@ impl<Item> Iart<Item> {
         let mut detail = unsafe { data.unwrap().unwrap_err_unchecked() };
         let ty = detail.ty.take().unwrap();
 
-        let data = (detail.trans_fns.0)(ty);
-        let is_t = data.is::<T>();
+        let data = unsafe { (detail.trans_fns.0)(ty) };
 
-        if unlikely(!is_t) {
-            detail.ty = Some((detail.trans_fns.1)(data));
-            self.data = Some(Err(detail));
-            let _ = self.send_log_to_handler::<true>(IartEvent::FunctionHook(TryDownCastFail));
-            return Err(self);
-        }
-
-        self.handled = true;
-
-        let concrete_box = unsafe { data.downcast::<T>().unwrap_unchecked() };
-
-        let value: T = *concrete_box;
-
-        Ok((value, detail))
-    }
-
-    pub fn to_result<E: 'static>(
-        mut self,
-    ) -> Result<
-        (
-            Result<Item, Box<E>>,
-            Option<VecDeque<&'static Location<'static>>>,
-        ),
-        Self,
-    > {
-        self.send_log();
-
-        self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::ToResult))
-            .unwrap();
-
-        if unlikely(self.data.is_none()) {
-            self.send_log_to_handler::<true>(IartEvent::FunctionHook(
-                AutoRequestType::ToResultFail,
-            ))
-            .unwrap();
-            return Err(self);
-        }
-
-        let data = self.data.take().unwrap();
-
-        self.handled = true;
-
-        match data {
-            Ok(item) => {
-                let log = {
-                    #[cfg(feature = "allow-backtrace-logging")]
-                    let res = self.log.take();
-                    #[cfg(not(feature = "allow-backtrace-logging"))]
-                    let res = None;
-                    res
-                };
-                Ok((Ok(item), log))
+        match data.downcast::<T>() {
+            Err(item) => {
+                cold_path();
+                detail.ty = Some(unsafe { (detail.trans_fns.1)(item) });
+                self.data = Some(Err(detail));
+                let _ = self.send_log_to_handler::<true>(IartEvent::FunctionHook(TryDownCastFail));
+                Err(self)
             }
-            Err(mut err) => match err.try_cast_err::<E>() {
-                None => {
-                    cold_path();
-                    self.handled = false;
-                    self.send_log_to_handler::<true>(IartEvent::FunctionHook(
-                        AutoRequestType::ToResultFail,
-                    ))
-                    .unwrap();
-                    Err(self)
-                }
-                Some(err) => {
-                    let log = {
-                        #[cfg(feature = "allow-backtrace-logging")]
-                        let res = self.log.take();
-                        #[cfg(not(feature = "allow-backtrace-logging"))]
-                        let res = None;
-                        res
-                    };
+            Ok(item) => {
+                self.handled = true;
 
-                    Ok((Err(err), log))
-                }
-            },
+                let value: T = *item;
+
+                Ok((value, detail))
+            }
         }
     }
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn __internal_send_try_used(&self) -> core::fmt::Result {
+    #[doc = include_str!("../../doc/fn/Iart/__internal_send_try_used.md")]
+    pub unsafe fn __internal_send_try_used(&self) -> core::fmt::Result {
         self.send_log_to_handler::<false>(IartEvent::FunctionHook(TryDownCastUsed))
     }
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn __internal_take_data(&mut self) -> Option<Result<Item, Box<ErrorDetail>>> {
+    #[doc = include_str!("../../doc/fn/Iart/__internal_take_data.md")]
+    pub unsafe fn __internal_take_data(&mut self) -> Option<Result<Item, Box<ErrorDetail>>> {
         self.data.take()
     }
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn __internal_take_log(&mut self) -> Option<VecDeque<&'static Location<'static>>> {
+    #[doc = include_str!("../../doc/fn/Iart/__internal_take_log.md")]
+    pub unsafe fn __internal_take_log(&mut self) -> Option<VecDeque<&'static Location<'static>>> {
         #[cfg(feature = "allow-backtrace-logging")]
         let res = self.log.take();
         #[cfg(not(feature = "allow-backtrace-logging"))]
@@ -197,24 +208,27 @@ impl<Item> Iart<Item> {
 
     #[doc(hidden)]
     #[inline]
-    pub fn __internal_get_trans_fns(
+    #[doc = include_str!("../../doc/fn/Iart/__internal_get_trans_fns.md")]
+    pub unsafe fn __internal_get_trans_fns(
         &mut self,
     ) -> Option<(
-        fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-        fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
+        unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
+        unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
     )> {
         self.trans_fns.clone()
     }
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn __internal_mark_handled(&mut self) {
+    #[doc = include_str!("../../doc/fn/Iart/__internal_mark_handled.md")]
+    pub unsafe fn __internal_mark_handled(&mut self) {
         self.handled = true;
     }
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn __internal_take_err_item(&mut self) -> Option<Item> {
+    #[doc = include_str!("../../doc/fn/Iart/__internal_take_err_item.md")]
+    pub unsafe fn __internal_take_err_item(&mut self) -> Option<Item> {
         #[cfg(feature = "error-can-have-item")]
         let res = self.err_item.take();
         #[cfg(not(feature = "error-can-have-item"))]
@@ -226,25 +240,28 @@ impl<Item> Iart<Item> {
     #[doc(hidden)]
     #[inline(always)]
     #[cfg(feature = "for-nightly-allocator-api-support")]
-    pub fn __internal_get_allocator(&self) -> Option<alloc::alloc::Global> {
+    #[doc = include_str!("../../doc/fn/Iart/__internal_get_allocator.md")]
+    pub unsafe fn __internal_get_allocator(&self) -> Option<alloc::alloc::Global> {
         Some(self.allocator)
     }
 
     #[doc(hidden)]
     #[inline(always)]
     #[cfg(not(feature = "for-nightly-allocator-api-support"))]
-    pub fn __internal_get_allocator(&self) -> Option<u32> {
+    #[doc = include_str!("../../doc/fn/Iart/__internal_get_allocator.md")]
+    pub unsafe fn __internal_get_allocator(&self) -> Option<u32> {
         None
     }
 
     #[doc(hidden)]
     #[inline(always)]
-    pub fn __internal_rebuild_err(
+    #[doc = include_str!("../../doc/fn/Iart/__internal_rebuild_err.md")]
+    pub unsafe fn __internal_rebuild_err(
         err: Box<ErrorDetail>,
         #[allow(unused)] log: Option<VecDeque<&'static Location<'static>>>,
         trans_fns: Option<(
-            fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-            fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
+            unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
+            unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
         )>,
         #[allow(unused)] err_item: Option<Item>,
         #[cfg(feature = "for-nightly-allocator-api-support")] alloc: Option<alloc::alloc::Global>,

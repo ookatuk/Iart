@@ -46,7 +46,7 @@ macro_rules! jen_fns {
                     b as Box<dyn core::any::Any + Send + Sync + 'static>
                 }
             })
-                as fn(
+                as unsafe fn(
                     Box<dyn crate::types::IartErr + Send + Sync + 'static>,
                 ) -> Box<dyn core::any::Any + Send + Sync + 'static>,
             (|any: Box<dyn core::any::Any + Send + Sync + 'static>| {
@@ -58,14 +58,14 @@ macro_rules! jen_fns {
                     b as Box<dyn crate::types::IartErr + Send + Sync + 'static>
                 }
             })
-                as fn(
+                as unsafe fn(
                     Box<dyn core::any::Any + Send + Sync + 'static>,
                 ) -> Box<dyn crate::types::IartErr + Send + Sync + 'static>,
         )
     };
 
     ($err_type:ty, $alloc:ty) => {{
-        let to_fn: fn(
+        let to_fn: unsafe fn(
             Box<dyn crate::types::IartErr<$alloc> + Send + Sync + 'static, $alloc>,
         ) -> Box<dyn core::any::Any + Send + Sync + 'static, $alloc> = |err| {
             let alloc = Box::allocator(&err).clone();
@@ -78,10 +78,12 @@ macro_rules! jen_fns {
             }
         };
 
-        let from_fn: fn(
+        let from_fn: unsafe fn(
             Box<dyn core::any::Any + Send + Sync + 'static, $alloc>,
-        )
-            -> Box<dyn crate::types::IartErr<$alloc> + Send + Sync + 'static, $alloc> = |any| {
+        ) -> Box<
+            dyn crate::types::IartErr<$alloc> + Send + Sync + 'static,
+            $alloc,
+        > = |any| {
             let alloc = Box::allocator(&any).clone();
             let raw_ptr = Box::leak(any) as *mut (dyn core::any::Any + Send + Sync + 'static);
             let concrete_ptr = raw_ptr as *mut $err_type;

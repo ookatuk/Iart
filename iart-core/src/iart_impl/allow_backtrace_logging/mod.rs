@@ -1,3 +1,5 @@
+#![doc = include_str!("../../../doc/modules/allow_backtrace_logging.md")]
+
 mod impls;
 
 #[cfg(feature = "for-nightly-allocator-api-support")]

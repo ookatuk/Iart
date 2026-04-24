@@ -1,7 +1,10 @@
+#![doc = include_str!("../../../doc/modules/impls.md")]
+
 use crate::types::Iart;
 use core::panic::Location;
 
 impl<Item> Iart<Item> {
+    #[doc = include_str!("../../../doc/fn/Iart/for_each_log.md")]
     pub fn for_each_log<F>(&self, #[allow(unused)] mut f: F)
     where
         F: FnMut(&'static Location<'static>) -> bool,

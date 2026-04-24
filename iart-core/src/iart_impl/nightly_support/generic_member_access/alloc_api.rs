@@ -1,3 +1,5 @@
+#![doc = include_str!("../../../../doc/modules/alloc_api.md")]
+
 use crate::types::{ErrorDetail, Iart};
 
 use core::fmt::{Debug, Display};

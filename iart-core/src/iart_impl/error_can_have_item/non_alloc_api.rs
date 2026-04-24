@@ -1,3 +1,5 @@
+#![doc = include_str!("../../../doc/modules/non_alloc_api.md")]
+
 use crate::types::{Iart, IartErr};
 use alloc::string::String;
 
@@ -6,6 +8,7 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
+    #[doc = include_str!("../../../doc/fn/Iart/non_alloc_api/Err_item.md")]
     pub fn Err_item<ERR: IartErr + 'static>(
         error: ERR,
         desc: impl Into<Option<&'static str>>,
@@ -21,6 +24,7 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
+    #[doc = include_str!("../../../doc/fn/Iart/non_alloc_api/Err_string_item.md")]
     pub fn Err_string_item<ERR: IartErr + 'static>(
         error: ERR,
         desc: impl Into<Option<String>>,

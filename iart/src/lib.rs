@@ -3,12 +3,22 @@
 //! a structure inspired by [`Result`], designed for `std` and `no-std`.
 //! supporting event-driven handling and dynamic tracing.
 //!
+//! > Incidentally, I took a library I was already using personally, turned it into a crate, added features, and stabilized the specifications at the time of the initial release.
+//! >
+//! > If we were to change the specifications, it would be in version 1.0 or 2.0.
+//!
+//!
 //! ## Features
 //!
 //! 1. **Event Notification**: Automatically notifies handlers when error-handling methods are executed.
 //! 2. **`no-std` Tracing**: Lightweight and simple execution tracing that works in embedded environments.
 //! 3. **Usage Validation**: Issues warnings if the result is not handled properly (goes beyond simple `is_err` checks).
 //! 4. **works on `stable` Rust**: See the `Nightly build only?` section.
+//!
+//! Perfect for projects expecting no-std support!
+//!
+//! Except for the default handler,
+//! functionality with no-std is not restricted!
 //!
 //! ## Nightly build only?
 //! **No!**
@@ -22,13 +32,19 @@
 //!
 //! Please give it a try, even on your stable toolchain!
 //!
-//!
+//! ## Are you worried because it's too small?
+//! I understand that if I were in your shoes, I'd be worried too.
+//! However,
+//! There are many features listed here as examples, but this is not an exhaustive list. (check now `features`)
+//! since it's a library containing nearly 2500 lines of code, the size is reasonable, and the contents are manageable.
+//! If you're worried, please do check it out.
 //!
 //! ## Examples(It works in stable)
 //!
 //! ```
 //! use iart::prelude::Iart;
 //! use iart::prelude::DummyErr;
+//! use iart::prelude::ErrorDetail;
 //! use iart::iart_try;
 //! use core::panic::Location;
 //!
@@ -46,11 +62,16 @@
 //!
 //!     // or Iart<u32> = Iart::Err_item(DummyErr{}, "test", 56); // `error-can-have-item`
 //!
-//!     let res_err1 = res_err1.ok().err().unwrap(); // ok function is if result is ok, return `i32`, if not ok, return self
+//!     let mut res_err1: Iart<i32> = res_err1.ok().err().unwrap(); // ok function is if result is ok, return `i32`, if not ok, return self
 //!
 //!     let result: Iart<u32> = core::result::Result::Err(DummyErr{}).into(); // Can This!(if IartErr is included in struct, From impl supported)
 //!
-//!     fn test() -> Iart<u32> {
+//!     let _ = result.unwrap_err();
+//!     let _ = res.unwrap();
+//!
+//!     // if you need downcast, use [`Iart::try_downcast`]
+//!
+//!     fn test() -> Iart<u32> { // Try is not supported by default, but if you want to use it...
 //!         let result: Iart<u32> = Iart::Ok(5);
 //!
 //!         // in nightly build,
@@ -65,7 +86,11 @@
 //!
 //!     assert_eq!(res, 5);
 //!
-//!     let res: Result<(Result<u32, Box<DummyErr>>, Option<VecDeque<&'static Location<'static>>>), Iart<u32>> = test().to_result(); // can this!
+//!     // Unless someone maliciously provides invalid values to the explicitly `unsafe` function [`iart_core::ErrorDetail::new`], UB will not occur in general use(and tests works).
+//!     // Conversely, it is marked `unsafe` precisely because [`iart_core::ErrorDetail::new`] results in UB if given invalid values.
+//!     //
+//!     // Besides, why should we even need to account for malicious use of [`iart_core::ErrorDetail::new`]?
+//!     let res: Result<(Result<(), (DummyErr, Box<ErrorDetail>)>, Option<u32>, Option<VecDeque<&'static Location<'static>>>), Iart<u32>> = unsafe{test().to_result()}; // can this!
 //!
 //!     // This can be done even under normal circumstances.
 //!     res_err1.for_each_log(|log: &'static Location<'static>| -> bool {
@@ -75,6 +100,7 @@
 //!
 //!     // 3. Automatic Warning on Drop
 //!     // If an error is dropped without being handled, iart automatically notifies the handler.
+//!     # unsafe{res_err1.__internal_mark_handled()};
 //!     drop(res_err1); // Triggers a warning to the handler
 //!
 //!     // 4. Proper Handling
@@ -128,6 +154,8 @@
 //!
 //! }
 //!
+//! impl core::error::Error for Error {}
+//!
 //! impl core::fmt::Display for Error { // Important parts such as `expect` are not passed to the handler, so you need to specify them.
 //!     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 //!         write!(f, "{:?}", self)
@@ -135,7 +163,9 @@
 //! }
 //!
 //! // During panics, including with `no-std` builds, the allocator is not used automatically. (Probably)
-//! fn handler(event: IartEvent, iart: IartHandleDetails) -> core::fmt::Result { //
+//! //If called for reasons other than handling `fmt`, the error will be ignored.
+//! // `Debug/Display` event may be called for formatting during a panic.
+//! fn handler(event: IartEvent, iart: IartHandleDetails) -> core::fmt::Result {
 //!     match event {
 //!         IartEvent::DebugRequest(fmt) => {
 //!             write!(fmt, "debug fmt")?;
@@ -180,7 +210,24 @@
 //! A:
 //! > Yes,
 //! > But we also conduct thorough execution tests(`cargo hack test` and other) and visual checks,
-//! >  and I'll say that I wrote 80% of it **myself**.
+//! >  and I'll say that I wrote 95%(I also used AI only in the `tests.rs` section / document (of course, I wrote some of it myself as well).) of it **myself**.
+//! >
+//! > As I've said many times,
+//! > 1. I check everything by reviewing it and running the code to make sure it's okay.
+//! > 2. The implementation does not use AI.(Except for tests/doc)
+//! > 3. Even when using AI, we perform visual checks and verify the processing.
+//! > 4. Even if I were to use AI in my implementations in the future,
+//! >    I would check the documentation for any unfamiliar functions before evaluating them.
+//!
+//! ## Expected Use Cases
+//! 1. To detect results that are suppressed or resolved with only `is_ok` at runtime.
+//! 2. To retain items even in case of errors.
+//! 3. To dynamically and statically retain text in addition to error cases.
+//! 4. To dynamically add errors from external sources.
+//! 5. To add a backtrace to [`Result`].
+//! 6. To obtain an environment-independent backtrace.
+//! 7. To obtain an easily understandable backtrace.
+//! 8. To use it intuitively without looking at the document, relying solely on predictive text.
 //!
 //! ## Features
 //! `std`
@@ -212,19 +259,100 @@
 //! > `core_error::Error` becomes `std::error::Error`
 //! >
 //! > Otherwise, `core_error::Error` will be implemented correctly.
-//! `ignore-handler-err`
-//! > Normally, when a handler returns an error,
-//! > it either reports it to fmt or panics, but if this feature is enabled,
-//! > it will either report it to fmt or ignore it.
 //! `enable-default-handler`
 //! > `std` is required.
 //! >
 //! > It's okay if this feature is invalid or if set_handler isn't called.
 //! >
-//!>  However, if unused is detected in the case of `std`, it simply calls `eprintln!`.
+//! > However, if unused is detected in the case of `std`, it simply calls `eprintln!`.
 //!
 //! ### Todo Features
 //! `for-nightly-allocator-api-support` - (nightly) Enables `allocator-api` support. Usage is the same as `core`, using `new_in`, etc.
+//!
+//! ## Mini Q&A
+//! Q: I have something to worry about.
+//!
+//! A:
+//! > If it's about specifications, please use the Q&A section here or email me directly.
+//! >
+//! < If it's about practical use, try forking a small project and converting it into something you can do in your spare time.
+//! >
+//! > Suggestions are very welcome!
+//!
+//! Q: Will there be any disruptive changes?
+//!
+//! A:
+//! > There are no plans to do so for the time being.
+//! >
+//! > In the current plan, breaking changes only occur when you intentionally enable the feature flag
+//!
+//! Q: It's so scary to use, I don't want to!(When converting to `any`, you might need to leak once and then convert it back to a box using `into_raw`.)
+//!
+//! A: Try the tests in all possible situations, or try different values until you feel confident.
+//! > Even so, if you have a bad feeling about the conversion,
+//! > you can still use it to some extent without it,
+//! > and since it passed the tests,
+//! > it should be working correctly.
+//! > Also, it's only used internally!
+//! >
+//! > Don't worry!
+//!
+//! Q: What about continuity?
+//!
+//! A: we **are** take action if you report it.
+//! > However, the order of responses may change,
+//! > or only alternative solutions may be provided. (Even in such cases,
+//! > we will review the methods as much as possible and strive to avoid changes that would compromise compatibility.)
+//! >
+//! > If I were to terminate the project,
+//! > I would make sure to switch to read-only mode first.
+//!
+//! Q: Is it compatible with `thiserror`?
+//!
+//! A: It will work, and `thiserror` should fit in nicely.
+//!
+//! Q: Is it okay if the code goes into a panic?
+//!
+//! A: In a `std` environment where `unwind` is running,
+//! >  in the event of a panic, it simply terminates without doing anything.
+//! > In the case of `no-std`, there is no detection method,
+//! > but it should be fine because it probably doesn't use `alloc`.
+//!
+//! Q: The warning when dropping is too severe.
+//!
+//! A: I would appreciate it if you could either disable the feature or come up with some suggestions.
+//!
+//! Q: I'm scared of macro dependencies.
+//!
+//! A: You can either acquire the `regex` skill or try using the following code:
+//! ```ingnore
+//!     let res = match xxx.is_ok() {
+//!         Ok(item) => {
+//!             res
+//!         }
+//!         Err(err) => {
+//!             err.send_log();
+//!             return err;
+//!         }
+//!     }
+//! ```
+//! Q: I'll use it as a library, but I don't want to release it externally.
+//!
+//! A: Then let's use to_result.(A cast from dyn to the type specified in the argument is performed.)
+//!
+//! Q: There's an `unsafe` method, but is it safe?
+//!
+//! A:
+//! > It's safe to use unless you perform some kind of black magic like crafting Iart via [`iart_core::ErrorDetail::new`].
+//! >
+//! > `UB` only occurs when two different types are involved.
+//!
+//! Q: why `0.x.x`?
+//!
+//! A:
+//! > The bug detection rate differs between individual use and use by many people, so future fixes are possible.
+//! >
+//! > However, the fact remains that it was working with `no-std`, so the amount of fixes needed should be small compared to other projects.
 
 pub mod prelude {
     pub use iart_core::*;

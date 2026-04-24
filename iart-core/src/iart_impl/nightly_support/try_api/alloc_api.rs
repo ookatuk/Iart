@@ -1,3 +1,5 @@
+#![doc = include_str!("../../../../doc/modules/alloc_api.md")]
+
 use crate::types::Iart;
 
 use crate::IartErr;
@@ -16,6 +18,7 @@ impl<Item: Debug, A: alloc::alloc::Allocator + Clone + 'static + Default> Try fo
     }
 
     #[track_caller]
+    #[doc = include_str!("../../../../doc/fn/Iart/branch.md")]
     fn branch(mut self) -> ControlFlow<Self::Residual, Self::Output> {
         self.send_log();
 

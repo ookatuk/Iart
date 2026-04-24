@@ -1,4 +1,13 @@
-Iart (Infomation and Result Trace)
+Iart (Information and Result Trace)
 
-This stores traces of [`Result`],
-item retention in case of errors, and unused flags.
+Saves the results and unused flags.
+
+You can enable other features by enabling the related features.
+
+See the added methods for details.
+
+# Side Effects
+
+When dropping,
+if certain related functions are enabled,
+they will be executed as **blocking** within the `drop` method.

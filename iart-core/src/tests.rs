@@ -73,21 +73,9 @@ fn test_ok_behavior() {
     let _guard = TEST_LOG_LOCK.lock();
 
     let w: Iart<i32> = Iart::Ok(42);
-    assert!(w.is_ok());
-    assert!(!w.is_err());
+    assert!(w.is_ok().unwrap());
+    assert!(!w.is_err().unwrap());
     assert_eq!(w.unwrap(), 42);
-}
-
-#[test]
-fn test_err_behavior() {
-    let _guard = TEST_LOG_LOCK.lock();
-
-    let w: Iart<i32> = Iart::Err(MyError, "something went wrong");
-    assert!(w.is_err());
-    assert!(!w.is_ok());
-
-    let err_desc = w.get_error_desc().unwrap();
-    assert_eq!(err_desc.desc.unwrap(), "something went wrong");
 }
 
 #[test]
@@ -149,7 +137,7 @@ fn test_from_option() {
     let opt_none: Option<i32> = None;
     let w_err = Iart::from_option(opt_none, MyError, Some("none error"));
 
-    assert!(w_err.is_err());
+    assert!(w_err.is_err().unwrap());
     let _ = w_err.unwrap_err();
 }
 
@@ -179,7 +167,7 @@ fn test_try_err_flow() {
     }
 
     let res = f();
-    assert!(res.is_err());
+    assert!(res.is_err().unwrap());
     #[cfg(feature = "allow-backtrace-logging")]
     assert!(!res.log.as_ref().unwrap().is_empty());
 
@@ -257,7 +245,7 @@ fn test_error_preserved() {
     let _guard = TEST_LOG_LOCK.lock();
 
     let w: Iart<i32> = Iart::Err(MyError, "msg");
-    let err = w.get_error_desc().unwrap();
+    let err = w.unwrap_err().0;
 
     assert_eq!(err.desc.unwrap(), "msg");
 }
@@ -327,7 +315,7 @@ fn test_downcast_to_original_error() {
         w
     };
 
-    let detail = w.try_downcast::<MyError>().expect("failed to downcast.");
+    let detail = unsafe { w.try_downcast::<MyError>().expect("failed to downcast.") };
     assert_eq!(detail.1.desc.unwrap().as_ref(), "TEST")
 }
 
@@ -376,7 +364,7 @@ fn cast_from() {
     }
 
     let res: Iart<u32> = f().into();
-    assert!(res.is_err());
+    assert!(res.is_err().unwrap());
     let _ = res.unwrap_err();
 
     let res: Iart<u32> = f2().into();
@@ -401,10 +389,10 @@ fn test_error_item() {
 fn test_map_and_handled_trace() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let mut res = Iart::<u32>::Ok(100);
+    let res = Iart::<u32>::Ok(100);
     assert!(!res.handled);
 
-    let res2 = res.map(|x| x.to_string()).expect("map failed");
+    let res2 = res.map(|x| x.to_string());
 
     assert!(!res2.handled);
     assert_eq!(res2.unwrap(), "100");
@@ -415,14 +403,25 @@ fn test_map_and_handled_trace() {
 fn test_map_err_item_transform() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let mut res = Iart::<u32>::Err_item(MyError {}, "msg", 10);
+    let res = Iart::<u32>::Err_item(MyError {}, "msg", 10);
 
-    let res2 = res
-        .map_err_item(|x| x, |item| item * 2)
-        .expect("map_err_item failed");
+    let res2 = res.map_err_item(|x| x, |item| item * 2);
 
     assert!(!res2.handled);
 
     let (_, item) = res2.unwrap_err();
     assert_eq!(item, Some(20));
+}
+
+#[test]
+fn to_result() {
+    let _guard = TEST_LOG_LOCK.lock();
+
+    let res = Iart::<u32>::Err(MyError {}, "msg");
+    let res2 = Iart::<u32>::Ok(5);
+    let _ = unsafe { res.to_result::<MyError>() }
+        .unwrap()
+        .0
+        .unwrap_err();
+    let _ = unsafe { res2.to_result::<MyError>() }.unwrap().0.unwrap();
 }

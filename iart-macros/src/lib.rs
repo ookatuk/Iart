@@ -3,6 +3,7 @@ use quote::quote;
 use syn::{DeriveInput, Expr, parse_macro_input};
 
 #[proc_macro]
+#[doc = include_str!("../doc/macros/iart_open_no_log.md")]
 pub fn iart_open_no_log(input: TokenStream) -> TokenStream {
     let e = parse_macro_input!(input as Expr);
 
@@ -10,19 +11,19 @@ pub fn iart_open_no_log(input: TokenStream) -> TokenStream {
         {
             let mut iart = #e;
 
-            match iart.__internal_take_data() {
+            match unsafe{iart.__internal_take_data()} {
                 Some(::core::result::Result::Ok(item)) => {
-                    iart.__internal_mark_handled();
+                    unsafe{iart.__internal_mark_handled()};
                     item
                 }
                 Some(::core::result::Result::Err(err)) => {
-                    return ::iart_core::Iart::__internal_rebuild_err(
+                    return unsafe{::iart::prelude::Iart::__internal_rebuild_err(
                         err,
                         iart.__internal_take_log(),
                         iart.__internal_get_trans_fns(),
                         iart.__internal_take_err_item(),
                         iart.__internal_get_allocator()
-                    );
+                    )};
                 }
                 None => panic!("Iart: consumed data in iart_open_no_log"),
             }
@@ -33,6 +34,7 @@ pub fn iart_open_no_log(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro]
+#[doc = include_str!("../doc/macros/iart_try.md")]
 pub fn iart_try(input: TokenStream) -> TokenStream {
     let e = parse_macro_input!(input as Expr);
 
@@ -43,21 +45,21 @@ pub fn iart_try(input: TokenStream) -> TokenStream {
             #[cfg(not(feature = "iart/for-nightly-try-support"))]
             let res = {
                 iart.send_log();
-                iart.__internal_send_try_used().unwrap();
+                unsafe{iart.__internal_send_try_used().unwrap()};
 
-                match iart.__internal_take_data() {
+                match unsafe{iart.__internal_take_data()} {
                     Some(::core::result::Result::Ok(item)) => {
-                        iart.__internal_mark_handled();
+                        unsafe{iart.__internal_mark_handled()};
                         item
                     }
                     Some(::core::result::Result::Err(err)) => {
-                        return ::iart_core::Iart::__internal_rebuild_err(
+                        return unsafe{::iart::prelude::Iart::__internal_rebuild_err(
                             err,
                             iart.__internal_take_log(),
                             iart.__internal_get_trans_fns(),
                             iart.__internal_take_err_item(),
                             iart.__internal_get_allocator(),
-                        );
+                        )};
                     }
                     None => panic!("Iart: consumed data in iart_try"),
                 }
@@ -73,6 +75,7 @@ pub fn iart_try(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(IartErr)]
+#[doc = include_str!("../doc/macros/derive_iart_err.md")]
 pub fn derive_iart_err(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = &input.ident;

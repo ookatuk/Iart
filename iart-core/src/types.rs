@@ -3,29 +3,33 @@
 #[must_use]
 #[derive(Debug)]
 #[doc = include_str!("../doc/structs/ErrorDetail.md")]
-pub struct ErrorDetail<
-    #[cfg(feature = "for-nightly-allocator-api-support")] A: alloc::alloc::Allocator + Clone = alloc::alloc::Global,
-> {
-    #[cfg(feature = "for-nightly-allocator-api-support")]
+#[cfg(feature = "for-nightly-allocator-api-support")]
+pub struct ErrorDetail<A: alloc::alloc::Allocator + Clone = alloc::alloc::Global> {
     #[doc = include_str!("../doc/variable/ErrorDetail/ty.md")]
     pub ty: Option<Box<dyn IartErr<A> + Send + Sync, A>>,
 
-    #[cfg(not(feature = "for-nightly-allocator-api-support"))]
+    #[doc = include_str!("../doc/variable/global/trans_fns.md")]
+    pub(crate) trans_fns: (
+        unsafe fn(Box<dyn IartErr<A> + Send + Sync, A>) -> Box<dyn core::any::Any + Send + Sync, A>,
+        unsafe fn(Box<dyn core::any::Any + Send + Sync, A>) -> Box<dyn IartErr<A> + Send + Sync, A>,
+    ),
+
+    #[doc = include_str!("../doc/variable/ErrorDetail/desc.md")]
+    pub desc: Option<Cow<'static, str>>,
+}
+
+#[must_use]
+#[derive(Debug)]
+#[doc = include_str!("../doc/structs/ErrorDetail.md")]
+#[cfg(not(feature = "for-nightly-allocator-api-support"))]
+pub struct ErrorDetail {
     #[doc = include_str!("../doc/variable/ErrorDetail/ty.md")]
     pub ty: Option<Box<dyn IartErr + Send + Sync>>,
 
-    #[cfg(feature = "for-nightly-allocator-api-support")]
     #[doc = include_str!("../doc/variable/global/trans_fns.md")]
     pub(crate) trans_fns: (
-        fn(Box<dyn IartErr<A> + Send + Sync, A>) -> Box<dyn core::any::Any + Send + Sync, A>,
-        fn(Box<dyn core::any::Any + Send + Sync, A>) -> Box<dyn IartErr<A> + Send + Sync, A>,
-    ),
-
-    #[cfg(not(feature = "for-nightly-allocator-api-support"))]
-    #[doc = include_str!("../doc/variable/global/trans_fns.md")]
-    pub(crate) trans_fns: (
-        fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-        fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
+        unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
+        unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
     ),
 
     #[doc = include_str!("../doc/variable/ErrorDetail/desc.md")]
@@ -93,8 +97,8 @@ mod non_api_impl {
 
         #[doc = include_str!("../doc/variable/global/trans_fns.md")]
         pub(crate) trans_fns: Option<(
-            fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-            fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
+            unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
+            unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
         )>,
     }
 }

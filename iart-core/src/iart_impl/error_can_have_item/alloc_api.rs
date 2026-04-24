@@ -1,3 +1,5 @@
+#![doc = include_str!("../../../doc/modules/alloc_api.md")]
+
 use crate::types::{Iart, IartErr};
 use alloc::string::String;
 
@@ -6,6 +8,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
+    #[doc = include_str!("../../../doc/fn/Iart/alloc_api/Err_item_in.md")]
     pub fn Err_item_in<ERR: IartErr<A> + Send + Sync + 'static>(
         error: ERR,
         desc: impl Into<Option<&'static str>>,
@@ -22,6 +25,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
+    #[doc = include_str!("../../../doc/fn/Iart/alloc_api/Err_item.md")]
     pub fn Err_item<ERR: IartErr<A> + Send + Sync + 'static>(
         error: ERR,
         desc: impl Into<Option<&'static str>>,
@@ -37,6 +41,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[cold]
     #[inline]
+    #[doc = include_str!("../../../doc/fn/Iart/alloc_api/Err_string_item_in.md")]
     pub fn Err_string_item_in<ERR: IartErr<A> + Send + Sync + 'static>(
         error: ERR,
         desc: impl Into<Option<String>>,
@@ -52,6 +57,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
+    #[doc = include_str!("../../../doc/fn/Iart/alloc_api/Err_string_item.md")]
     pub fn Err_string_item<ERR: IartErr<A> + Send + Sync + 'static>(
         error: ERR,
         desc: impl Into<Option<String>>,

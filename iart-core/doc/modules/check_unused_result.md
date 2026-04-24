@@ -1,0 +1,1 @@
+The module that oversees the definitions of `check-unused-result` and its `with-ok` option.

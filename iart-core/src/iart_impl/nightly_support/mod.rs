@@ -1,3 +1,5 @@
+#![doc = include_str!("../../../doc/modules/nightly_support.md")]
+
 mod alloc_api;
 
 #[cfg(feature = "for-nightly-error-generic-member-access")]

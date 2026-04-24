@@ -43,8 +43,11 @@ danger-allow-panic-if-unused = ["check-unused-result-with-ok"]
 error-can-have-item = []
 
 core_error-support = ["core-error"]
-ignore-handler-err = []
 enable-default-handler = ["std"]
 
 # TODO
-for-nightly-allocator-api-support = []
+# for-nightly-allocator-api-support = []
+
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(feature, values("for-nightly-allocator-api-support"))'] }

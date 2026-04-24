@@ -1,7 +1,9 @@
+#![doc = include_str!("../../doc/modules/iart_impl.md")]
+
 #[cfg(feature = "allow-backtrace-logging")]
-pub mod allow_backtrace_logging;
+mod allow_backtrace_logging;
 #[cfg(feature = "error-can-have-item")]
-pub mod error_can_have_item;
+mod error_can_have_item;
 mod impls;
 mod nightly_support;
 
