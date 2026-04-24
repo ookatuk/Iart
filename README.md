@@ -353,15 +353,14 @@ Q: I'm scared of macro dependencies.
 
 A: You can either acquire the `regex` skill or try using the following code:
 
-```rust
-    let res = match xxx.is_ok() {
-Ok(item) => {
-res
+```ingnore
+let res = match xxx.is_ok() {
+    Ok(item) => {
+    res
 }
 Err(err) => {
-err.send_log();
-return err;
-}
+    err.send_log();
+    return err;
 }
 ```
 
