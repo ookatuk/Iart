@@ -11,9 +11,9 @@ authors = ["ookatu"]
 
 description = "The Infomation and Result Trace crate"
 
-documentation = "https://example.com/" # TODO
-repository = "https://example.com/" # TODO
-license = "" # TODO
+documentation = ""
+repository = "https://github.com/ookatuk/Iart"
+license = "Apache-2.0"
 
 [workspace.dependencies]
 spin = "^0.10"
