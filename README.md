@@ -261,9 +261,10 @@ A:
 > It is also used as a criterion for determining whether something is standard,
 > It is also used for other purposes, such as enabling/disabling panic checks during `std` builds.
 
-`for-nightly-likely-optimization` - (nightly) Unlikely and cold_path are placed in areas where abnormal processing
-occurs, and the placement of paths that are normally accessed is optimized.
+`for-nightly-likely-optimization` - (nightly) Unlikely and cold_path are placed in areas where abnormal processing occurs, and the placement of paths that are normally accessed is optimized.
+
 `for-nightly-try-support` - (nightly) Supports `try_api_v2` and enables `Iart::Err()?`.
+
 `for-nightly-error-generic-member-access` - (nightly)
 
 `no-trace-dedup` - If there are consecutive traces from the same location, the function to not add will be **disabled**.
@@ -272,21 +273,26 @@ occurs, and the placement of paths that are normally accessed is optimized.
 > The source code location is recorded from the time the structure is created until,
 > A method that destroys the structure is executed.
 > This uses `Location::caller()`.
+
 `allow-backtrace-logging-with-ok` - `allow-backtrace-logging` is also applied when the result is OK.
-`check-unused-result` - This feature reports to a handler if an item is dropped and the error details are not handled
-> clearly.
+
+`check-unused-result` - This feature reports to a handler if an item is dropped and the error details are not handled clearly.
+
 `check-unused-result-with-ok` - This feature checks `check-unused-result` even when the result is OK.
-`danger-allow-panic-if-unused` - If unused is detected, `panic!` will be executed after the handler has finished
-> processing.
+
+`danger-allow-panic-if-unused` - If unused is detected, `panic!` will be executed after the handler has finished processing.
+
 `error-can-have-item`
 > `Err_item`, `Err_item_option`, etc., will be added.
 > Please note that these will be passed in a special format.
 > For example, in the case of the `err` method, it is passed as the second tuple.
+
 `core_error-support`
 > It cannot coexist with `std` Because,
 > `core_error::Error` becomes `std::error::Error`
 >
 > Otherwise, `core_error::Error` will be implemented correctly.
+
 `enable-default-handler`
 > `std` is required.
 >
