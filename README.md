@@ -293,9 +293,9 @@ occurs, and the placement of paths that are normally accessed is optimized.
 > It's okay if this feature is invalid or if set_handler isn't called.
 >
 > However, if unused is detected in the case of `std`, it simply calls `eprintln!`.
+> 
 `for-nightly-allocator-api-support` - (nightly) Enables `allocator-api` support. Usage is the same as `core`, using
 `new_in`, etc.
->
 
 ### Todo Features
 
