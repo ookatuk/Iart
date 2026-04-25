@@ -101,6 +101,7 @@ fn main() {
     }
 }
 ```
+[see examples](./iart/examples)
 
 ## Nightly build only?
 
