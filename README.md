@@ -222,8 +222,6 @@ fn main() {
 
 If you need to use a specific allocator instead of the global allocator, we recommend enabling the
 `for-nightly-allocator-api-support` feature.
-Note: This feature is currently a **TODO**. Both the functionality and implementation are unstable.
-To use it, you must manually uncomment the relevant lines in Cargo.toml.
 
 ## Want to Panic?
 
@@ -295,11 +293,11 @@ occurs, and the placement of paths that are normally accessed is optimized.
 > It's okay if this feature is invalid or if set_handler isn't called.
 >
 > However, if unused is detected in the case of `std`, it simply calls `eprintln!`.
-
-### Todo Features
-
 `for-nightly-allocator-api-support` - (nightly) Enables `allocator-api` support. Usage is the same as `core`, using
 `new_in`, etc.
+>
+
+### Todo Features
 
 `no-alloc` - It would be great if we could do this without even using `alloc`. However, `Box` might need to be made `&'static'`.
 
