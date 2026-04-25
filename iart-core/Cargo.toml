@@ -7,6 +7,7 @@ description.workspace = true
 authors.workspace = true
 repository.workspace = true
 license.workspace = true
+readme = "../README.md"
 
 [dependencies]
 core-error = { version = "^0.0", default-features = false, optional = true }
