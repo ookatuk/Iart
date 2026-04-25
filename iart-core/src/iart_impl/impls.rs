@@ -1,5 +1,7 @@
 use crate::IartErr;
-use crate::events::AutoRequestType::{ToResult, ToResultFail, TryDownCastFail, TryDownCastUsed};
+use crate::events::AutoRequestType::{
+    ToResult, ToResultFail, TryDownCastFail, TryDownCastUsed, TryUsed,
+};
 use crate::events::IartEvent;
 use crate::types::{DummyErr, ErrorDetail, Iart};
 use crate::utils::{cold_path, unlikely};
@@ -185,7 +187,7 @@ impl<Item: std::fmt::Debug> Iart<Item> {
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_send_try_used.md")]
     pub unsafe fn __internal_send_try_used(&self) -> core::fmt::Result {
-        self.send_log_to_handler::<false>(IartEvent::FunctionHook(TryDownCastUsed))
+        self.send_log_to_handler::<false>(IartEvent::FunctionHook(TryUsed))
     }
 
     #[doc(hidden)]
