@@ -1,3 +1,7 @@
+#![cfg_attr(feature = "for-nightly-allocator-api-support", feature(allocator_api))]
+
+extern crate alloc;
+
 use iart_core::events::{AutoRequestType, IartEvent};
 use iart_core::{Iart, IartHandleDetails, set_handler};
 use iart_macros::{IartErr, iart_try};
@@ -6,6 +10,7 @@ use std::fmt::{Display, Formatter};
 #[allow(unexpected_cfgs)]
 #[derive(Debug, Clone, IartErr)]
 struct MyErr {
+    #[allow(unused)]
     data: String,
 }
 
@@ -14,6 +19,8 @@ impl Display for MyErr {
         Display::fmt("MyErr", f)
     }
 }
+
+impl core::error::Error for MyErr {}
 
 fn add(x: i32, y: i32) -> Iart<i32> {
     Iart::Ok(x + y)

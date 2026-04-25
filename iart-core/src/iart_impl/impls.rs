@@ -87,9 +87,14 @@ impl<Item: core::fmt::Debug> Iart<Item> {
         self.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResult))
             .unwrap();
 
+        #[cfg(feature = "allow-backtrace-logging")]
         let log = self.log.take();
+        #[cfg(not(feature = "allow-backtrace-logging"))]
+        let log = None;
+
         #[cfg(feature = "error-can-have-item")]
         let err_item = self.err_item.take();
+
         #[cfg(not(feature = "error-can-have-item"))]
         let err_item = None;
 
@@ -99,7 +104,10 @@ impl<Item: core::fmt::Debug> Iart<Item> {
             Some(false) => match unsafe { self.try_downcast::<T>() } {
                 Err(mut me) => {
                     cold_path();
-                    me.log = log;
+                    #[cfg(feature = "allow-backtrace-logging")]
+                    {
+                        me.log = log;
+                    }
                     #[cfg(feature = "error-can-have-item")]
                     {
                         me.err_item = err_item;
@@ -121,7 +129,10 @@ impl<Item: core::fmt::Debug> Iart<Item> {
             None => {
                 cold_path();
 
-                self.log = log;
+                #[cfg(feature = "allow-backtrace-logging")]
+                {
+                    self.log = log;
+                }
 
                 #[cfg(feature = "error-can-have-item")]
                 {
