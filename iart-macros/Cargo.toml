@@ -7,7 +7,6 @@ authors.workspace = true
 description.workspace = true
 documentation.workspace = true
 repository.workspace = true
-license.workspace = true
 
 [lib]
 proc-macro = true
