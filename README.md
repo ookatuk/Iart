@@ -77,7 +77,7 @@ fn main() {
     // Unless someone maliciously provides invalid values to the explicitly `unsafe` function [`iart_core::ErrorDetail::new`], UB will not occur in general use(and tests works).
     // Conversely, it is marked `unsafe` precisely because [`iart_core::ErrorDetail::new`] results in UB if given invalid values.
     //
-    // Besides, why should we even need to account for malicious use of [`iart_core::ErrorDetail::new`]?
+    // Besides, why should we even need to account for manual tampering with [`iart_core::ErrorDetail::new`]?
     let res: Result<(Result<(), (DummyErr, Box<ErrorDetail>)>, Option<u32>, Option<VecDeque<&'static Location<'static>>>), Iart<u32>> = unsafe { test().to_result() }; // can this!
 
     // This can be done even under normal circumstances.
