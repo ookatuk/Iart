@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/iart-macros/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/iart/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/iart/examples" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
