@@ -16,12 +16,18 @@ iart-macros = { workspace = true }
 
 [features]
 default = ["iart-core/default"]
-nightly = ["iart-core/nightly"]
+
+nightly = [
+    "for-nightly-likely-optimization",
+    "for-nightly-try-support",
+    "for-nightly-allocator-api-support",
+    "for-nightly-error-generic-member-access"
+]
 
 std = ["iart-core/std"]
 
 for-nightly-likely-optimization = ["iart-core/for-nightly-likely-optimization"]
-for-nightly-try-support = ["iart-core/for-nightly-try-support"]
+for-nightly-try-support = ["iart-core/for-nightly-try-support", "iart-macros/for-nightly-try-support"]
 for-nightly-error-generic-member-access = ["iart-core/for-nightly-error-generic-member-access"]
 
 no-trace-dedup = ["iart-core/no-trace-dedup"]
@@ -38,5 +44,4 @@ error-can-have-item = ["iart-core/error-can-have-item"]
 core_error-support = ["iart-core/core_error-support"]
 enable-default-handler = ["iart-core/enable-default-handler"]
 
-# TODO Features
-# for-nightly-allocator-api-support = ["iart-core/for-nightly-allocator-api-support"]
+for-nightly-allocator-api-support = ["iart-core/for-nightly-allocator-api-support", "iart-macros/for-nightly-allocator-api-support"]
