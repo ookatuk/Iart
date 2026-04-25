@@ -1,5 +1,12 @@
 # Iart: **I**s **A**dvanced **R**esult **T**race
 
+[![Downloads](https://img.shields.io/crates/d/iart.svg)](https://crates.io/crates/iart)
+[![Crates.io](https://img.shields.io/crates/v/iart.svg)](https://crates.io/crates/iart)
+[![Docs.rs](https://docs.rs/iart/badge.svg)](https://docs.rs/iart)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
+---
+
 a structure inspired by [`Result`], designed for `std` and `no-std`.
 supporting event-driven handling and dynamic tracing.
 
@@ -19,27 +26,6 @@ Perfect for projects expecting no-std support!
 
 Except for the default handler,
 functionality with no-std is not restricted!
-
-## Nightly build only?
-
-**No!**
-I've ensured it **works perfectly**(with `cargo hack test`) with stable builds as well!
-
-While some syntax is limited, usability is only **slightly affected.**
-(For example, you'll use `iart_try!` instead of the `?` operator.)
-
-**Crucially, almost all core features are NOT restricted!**
-(Everything except those explicitly marked with `for-nightly-` feature flags.)
-
-Please give it a try, even on your stable toolchain!
-
-## Are you worried because it's too small?
-
-I understand that if I were in your shoes, I'd be worried too.
-However,
-There are many features listed here as examples, but this is not an exhaustive list. (check now `features`)
-since it's a library containing nearly 2500 lines of code, the size is reasonable, and the contents are manageable.
-If you're worried, please do check it out.
 
 ## Examples(It works in stable)
 
@@ -115,6 +101,27 @@ fn main() {
     }
 }
 ```
+
+## Nightly build only?
+
+**No!**
+I've ensured it **works perfectly**(with `cargo hack test`) with stable builds as well!
+
+While some syntax is limited, usability is only **slightly affected.**
+(For example, you'll use `iart_try!` instead of the `?` operator.)
+
+**Crucially, almost all core features are NOT restricted!**
+(Everything except those explicitly marked with `for-nightly-` feature flags.)
+
+Please give it a try, even on your stable toolchain!
+
+## Are you worried because it's too small?
+
+I understand that if I were in your shoes, I'd be worried too.
+However,
+There are many features listed here as examples, but this is not an exhaustive list. (check now `features`)
+since it's a library containing nearly 2500 lines of code, the size is reasonable, and the contents are manageable.
+If you're worried, please do check it out.
 
 ## Wait? can I set max traces?
 
