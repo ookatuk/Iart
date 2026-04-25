@@ -651,7 +651,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         A: Default,
     {
         match data {
-            Ok(val) => Iart::Ok(val),
+            Ok(val) => Iart::Ok_in(val, A::default()),
             Err(err) => {
                 let mut iart = Iart::Err_in(DummyErr {}, None, A::default());
                 iart.trans_fns = Some(err.trans_fns);
