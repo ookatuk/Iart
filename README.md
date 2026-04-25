@@ -382,3 +382,12 @@ A:
 >
 > However, the fact remains that it was working with `no-std`, so the amount of fixes needed should be small compared to
 > other projects.
+
+Q: Can you even be trusted in the first place?
+
+A:
+> If you look at my GitHub contributions, you'll see that I've worked on multilingual support, bug fixes, and feature
+> additions (and had them merged) in languages ​​other than Rust.
+>
+> If you're interested in Rust(and memory safety),
+> you can see it in the code of my projects(pined). (My documentation might make you doubt my abilities, though.)

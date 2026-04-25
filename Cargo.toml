@@ -7,7 +7,7 @@ members = ["iart", "iart-core", "iart-macros"]
 edition = "2024"
 
 version = "0.1.0"
-authors = ["ookatu"]
+authors = ["ookatu <hgfhgfojgljgjhdiopyfgiiiiiu@outlook.com>"]
 
 description = "The Infomation and Result Trace crate"
 
