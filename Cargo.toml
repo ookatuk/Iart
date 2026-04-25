@@ -14,6 +14,9 @@ description = "The Infomation and Result Trace crate"
 repository = "https://github.com/ookatuk/Iart"
 license = "Apache-2.0"
 
+keywords = ["error-handling", "no-std", "tracing", "diagnostics"]
+categories = ["rust-patterns", "no-std", "development-tools::debugging"]
+
 [workspace.dependencies]
 spin = "^0.10"
 iart-core = { path = "iart-core", version = "0.1.1" }
