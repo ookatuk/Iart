@@ -12,6 +12,10 @@ categories.workspace = true
 
 readme = "../README.md"
 
+[features]
+for-nightly-try-support = []
+for-nightly-allocator-api-support = []
+
 [lib]
 proc-macro = true
 

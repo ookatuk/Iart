@@ -143,7 +143,7 @@ mod api_impl {
     #[allow(unused)]
     #[doc = include_str!("../doc/structs/IartHandleDetails.md")]
     #[derive(Clone, Debug)]
-    pub struct IartHandleDetails<'a, A: alloc::alloc::Allocator + Clone> {
+    pub struct IartHandleDetails<'a, A: alloc::alloc::Allocator + Clone = alloc::alloc::Global> {
         #[doc = include_str!("../doc/variable/IartHandleDetails/detail.md")]
         pub detail: Option<&'a Box<ErrorDetail<A>, A>>,
 
@@ -176,8 +176,12 @@ mod api_impl {
 
         #[doc = include_str!("../doc/variable/global/trans_fns.md")]
         pub(crate) trans_fns: Option<(
-            fn(Box<dyn IartErr<A> + Send + Sync, A>) -> Box<dyn core::any::Any + Send + Sync, A>,
-            fn(Box<dyn core::any::Any + Send + Sync, A>) -> Box<dyn IartErr<A> + Send + Sync, A>,
+            unsafe fn(
+                Box<dyn IartErr<A> + Send + Sync, A>,
+            ) -> Box<dyn core::any::Any + Send + Sync, A>,
+            unsafe fn(
+                Box<dyn core::any::Any + Send + Sync, A>,
+            ) -> Box<dyn IartErr<A> + Send + Sync, A>,
         )>,
     }
 }

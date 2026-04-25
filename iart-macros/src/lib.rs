@@ -40,12 +40,12 @@ pub fn iart_open_no_log(input: TokenStream) -> TokenStream {
 pub fn iart_try(input: TokenStream) -> TokenStream {
     let e = parse_macro_input!(input as Expr);
 
+    #[cfg(not(feature = "for-nightly-try-support"))]
     let expanded = quote! {
         {
             let mut iart = #e;
 
-            #[cfg(not(feature = "iart/for-nightly-try-support"))]
-            let res = {
+            {
                 iart.send_log();
                 unsafe{iart.__internal_send_try_used().unwrap()};
 
@@ -65,11 +65,14 @@ pub fn iart_try(input: TokenStream) -> TokenStream {
                     }
                     None => panic!("Iart: consumed data in iart_try"),
                 }
-            };
-            #[cfg(feature = "iart/for-nightly-try-support")]
-            let res = iart?;
-
-            res
+            }
+        }
+    };
+    #[cfg(feature = "for-nightly-try-support")]
+    let expanded = quote! {
+        {
+            let mut iart = #e;
+            iart?
         }
     };
 
@@ -82,23 +85,29 @@ pub fn derive_iart_err(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
     let name = &input.ident;
 
+    #[cfg(feature = "for-nightly-allocator-api-support")]
+    let body = quote! {
+            fn clone_box_in<'a>(&self, alloc: ::alloc::alloc::Global) -> Box<dyn ::iart::prelude::IartErr<::alloc::alloc::Global> + 'a + Send + Sync, ::alloc::alloc::Global>
+        where
+            Self: 'a,
+        {
+            Box::new_in(self.clone(), alloc)
+        }
+    };
+
+    #[cfg(not(feature = "for-nightly-allocator-api-support"))]
+    let body = quote! {
+            fn clone_box(&self) -> Box<dyn ::iart::prelude::IartErr + Send + Sync + 'static> {
+            Box::new(self.clone())
+        }
+    };
+
     let expanded = quote! {
         impl ::iart::prelude::IartErr for #name
         where
             Self: ::core::clone::Clone + 'static
         {
-            #[cfg(feature = "iart/for-nightly-allocator-api-support")]
-            fn clone_box_in<'a>(&self, alloc: ::alloc::alloc::Global) -> Box<dyn ::iart::prelude::IartErr<::alloc::alloc::Global> + 'a + Send + Sync, Global>
-            where
-                Self: 'a,
-            {
-                Box::new_in(self.clone(), alloc)
-            }
-
-            #[cfg(not(feature = "iart/for-nightly-allocator-api-support"))]
-            fn clone_box(&self) -> Box<dyn ::iart::prelude::IartErr + Send + Sync + 'static> {
-                Box::new(self.clone())
-            }
+            #body
         }
     };
 

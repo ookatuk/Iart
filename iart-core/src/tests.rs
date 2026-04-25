@@ -162,7 +162,7 @@ fn test_try_err_flow() {
     let _guard = TEST_LOG_LOCK.lock();
 
     fn f() -> Iart<i32> {
-        let _ = Iart::Err(MyError, None)?;
+        let _ = Iart::Err(MyError, Some("test"))?;
         unreachable!();
     }
 
@@ -256,7 +256,7 @@ fn test_allocator_ok() {
     let _guard = TEST_LOG_LOCK.lock();
 
     let w = Iart::Ok_in(42, Global);
-    assert!(w.is_ok());
+    assert!(w.is_ok().unwrap());
     assert_eq!(w.unwrap(), 42);
 }
 
