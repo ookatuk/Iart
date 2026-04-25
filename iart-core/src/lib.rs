@@ -10,7 +10,7 @@
     feature = "for-nightly-error-generic-member-access",
     feature(error_generic_member_access)
 )]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../doc/modules/lib.md")]
 
 extern crate alloc;
