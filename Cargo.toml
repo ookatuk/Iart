@@ -11,7 +11,6 @@ authors = ["ookatu <hgfhgfojgljgjhdiopyfgiiiiiu@outlook.com>"]
 
 description = "The Infomation and Result Trace crate"
 
-documentation = ""
 repository = "https://github.com/ookatuk/Iart"
 license = "Apache-2.0"
 
