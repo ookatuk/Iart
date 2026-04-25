@@ -37,7 +37,7 @@ impl ErrorDetail {
     }
 }
 
-impl<Item: std::fmt::Debug> Iart<Item> {
+impl<Item: core::fmt::Debug> Iart<Item> {
     #[inline]
     #[must_use]
     #[doc = include_str!("../../doc/fn/Iart/is_ok.md")]
