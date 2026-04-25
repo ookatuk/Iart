@@ -437,7 +437,7 @@ impl<Item> Iart<Item> {
                 handled: false,
                 data: None,
                 #[cfg(feature = "error-can-have-item")]
-                err_item: None,
+                err_item: self.err_item.take().map(item_fns),
                 #[cfg(feature = "allow-backtrace-logging")]
                 log: self.log.take(),
                 trans_fns: None,

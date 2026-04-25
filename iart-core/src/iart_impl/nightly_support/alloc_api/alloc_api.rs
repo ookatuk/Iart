@@ -3,7 +3,7 @@
 use crate::events::{AutoRequestType, IartEvent};
 use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails, IartLogger};
 use crate::utils::{cold_path, unlikely};
-use crate::{is_initialized_handler, HANDLER};
+use crate::{HANDLER, is_initialized_handler};
 use alloc::alloc::Allocator;
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
@@ -63,8 +63,12 @@ impl<A: alloc::alloc::Allocator + Clone> ErrorDetail<A> {
         ty: Box<dyn IartErr<A> + Send + Sync, A>,
         desc: Option<Cow<'static, str>>,
         to_any: (
-            fn(Box<dyn IartErr<A> + Send + Sync, A>) -> Box<dyn core::any::Any + Send + Sync, A>,
-            fn(Box<dyn core::any::Any + Send + Sync, A>) -> Box<dyn IartErr<A> + Send + Sync, A>,
+            unsafe fn(
+                Box<dyn IartErr<A> + Send + Sync, A>,
+            ) -> Box<dyn core::any::Any + Send + Sync, A>,
+            unsafe fn(
+                Box<dyn core::any::Any + Send + Sync, A>,
+            ) -> Box<dyn IartErr<A> + Send + Sync, A>,
         ),
     ) -> Self {
         Self {
@@ -124,7 +128,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                 #[cfg(feature = "allow-backtrace-logging")]
                 log: self.log.as_ref(),
                 is_err: if self.data.is_some() {
-                    Some(self.is_err())
+                    Some(self.is_err().unwrap())
                 } else {
                     None
                 },
@@ -207,11 +211,13 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
 
         Iart::<Item, A> {
             data: Some(Err(Box::new_in(
-                ErrorDetail::<A>::new(
-                    Box::new_in(error, allocator.clone()),
-                    desc.into().map(|x| Cow::Borrowed(x)),
-                    to_any,
-                ),
+                unsafe {
+                    ErrorDetail::<A>::new(
+                        Box::new_in(error, allocator.clone()),
+                        desc.into().map(|x| Cow::Borrowed(x)),
+                        to_any,
+                    )
+                },
                 allocator.clone(),
             ))),
             handled: false,
@@ -245,11 +251,13 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
 
             Self {
                 data: Some(Err(Box::new_in(
-                    ErrorDetail::new(
-                        Box::new_in(error, allocator.clone()),
-                        desc.into().map(|x| Cow::Owned(x)),
-                        to_any,
-                    ),
+                    unsafe {
+                        ErrorDetail::new(
+                            Box::new_in(error, allocator.clone()),
+                            desc.into().map(|x| Cow::Owned(x)),
+                            to_any,
+                        )
+                    },
                     allocator.clone(),
                 ))),
                 handled: false,
@@ -441,6 +449,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     where
         A: Debug,
     {
+        self.handled = true;
         self.send_log();
 
         unsafe {
@@ -449,12 +458,8 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         };
 
         match self.data.take() {
-            Some(Ok(t)) => {
-                self.handled = true;
-                t
-            }
+            Some(Ok(t)) => t,
             Some(Err(e)) => {
-                self.handled = true;
                 panic!("{}: {:?}", msg, e);
             }
             None => {
@@ -494,7 +499,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         Self::from_option_in(data, e_type, detail, A::default())
     }
 
-    #[track_caller]It behaves similarly to [`Result::map`].
+    #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/send_log.md")]
     pub fn send_log(&mut self) {
         #[cfg(feature = "allow-backtrace-logging")]
@@ -554,16 +559,17 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[cfg(feature = "error-can-have-item")]
     #[doc = include_str!("../../../../doc/fn/Iart/map_err_item.md")]
-    pub fn map_err_item<F, NewItem>(mut self, fns: F, item_fns: F) -> Result<Iart<NewItem, A>, Self>
+    pub fn map_err_item<F, F2, NewItem>(mut self, fns: F, item_fns: F2) -> Iart<NewItem, A>
     where
         F: FnOnce(Item) -> NewItem,
-        A: Default,
+        F2: FnOnce(Item) -> NewItem,
+        A: Default + Send + Sync + 'static,
     {
         self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Map))
             .unwrap();
 
         if let Some(data) = self.data.take() {
-            let mut res: Iart<NewItem, A> = data.map(fns).into();
+            let mut res: Iart<NewItem, A> = Self::from_internal_data(data.map(fns));
 
             #[cfg(feature = "allow-backtrace-logging")]
             {
@@ -571,31 +577,45 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             }
 
             let item = self.err_item.take();
-            let item = item.map(item_fns).into();
+            let item = item.map(item_fns);
             res.err_item = item;
 
             res.handled = false;
             self.handled = true;
 
-            Ok(res)
+            res
         } else {
             cold_path();
-            Err(self)
+
+            let res = Iart::<NewItem, A> {
+                handled: false,
+                data: None,
+                #[cfg(feature = "error-can-have-item")]
+                err_item: self.err_item.take().map(item_fns),
+                #[cfg(feature = "allow-backtrace-logging")]
+                log: self.log.take(),
+                trans_fns: None,
+                allocator: self.allocator.clone(),
+            };
+
+            self.handled = true;
+
+            res
         }
     }
 
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/map.md")]
-    pub fn map<F, NewItem>(mut self, fns: F) -> Result<Iart<NewItem, A>, Self>
+    pub fn map<F, NewItem: 'static>(mut self, fns: F) -> Iart<NewItem, A>
     where
         F: FnOnce(Item) -> NewItem,
-        A: Default,
+        A: Default + Send + Sync + 'static,
     {
         self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Map))
             .unwrap();
 
         if let Some(data) = self.data.take() {
-            let mut res: Iart<NewItem, A> = data.map(fns).into();
+            let mut res: Iart<NewItem, A> = Self::from_internal_data(data.map(fns));
 
             #[cfg(feature = "allow-backtrace-logging")]
             {
@@ -605,10 +625,40 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             res.handled = false;
             self.handled = true;
 
-            Ok(res)
+            res
         } else {
             cold_path();
-            Err(self)
+
+            let res = Iart::<NewItem, A> {
+                handled: false,
+                data: None,
+                #[cfg(feature = "error-can-have-item")]
+                err_item: None,
+                #[cfg(feature = "allow-backtrace-logging")]
+                log: self.log.take(),
+                trans_fns: None,
+                allocator: self.allocator.clone(),
+            };
+
+            self.handled = true;
+
+            res
+        }
+    }
+
+    fn from_internal_data<Data>(data: Result<Data, Box<ErrorDetail<A>, A>>) -> Iart<Data, A>
+    where
+        A: Default,
+    {
+        match data {
+            Ok(val) => Iart::Ok(val),
+            Err(err) => {
+                let mut iart = Iart::Err_in(DummyErr {}, None, A::default());
+                iart.trans_fns = Some(err.trans_fns);
+                iart.data = Some(Err(err));
+
+                iart
+            }
         }
     }
 }
@@ -694,8 +744,8 @@ impl<T, E: IartErr<A> + 'static + Send + Sync, A: Allocator + Clone + Default + 
     #[track_caller]
     fn from(res: Result<T, E>) -> Self {
         match res {
-            Ok(val) => Iart::<T, A>::Ok(val),
-            Err(err) => Iart::<T, A>::Err(err, None),
+            Ok(val) => Iart::<T, A>::Ok_in(val, A::default()),
+            Err(err) => Iart::<T, A>::Err_in(err, None, A::default()),
         }
     }
 }

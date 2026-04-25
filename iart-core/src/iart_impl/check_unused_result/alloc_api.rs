@@ -14,10 +14,8 @@ impl<T, A: Clone + alloc::alloc::Allocator> Drop for Iart<T, A> {
         if !self.handled {
             let is_err = self.data.as_ref().map_or(false, |r| r.is_err());
             if is_err || cfg!(feature = "check-unused-result-with-ok") {
-                let _ = unsafe {
-                    self.send_log_to_handler::<true>(IartEvent::DroppedWithoutCheck)
-                        .unwrap();
-                };
+                self.send_log_to_handler::<true>(IartEvent::DroppedWithoutCheck)
+                    .unwrap();
                 #[cfg(feature = "danger-allow-panic-if-unused")]
                 panic!("detected unused Iart!");
             }
