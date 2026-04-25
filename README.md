@@ -300,6 +300,7 @@ occurs, and the placement of paths that are normally accessed is optimized.
 
 `for-nightly-allocator-api-support` - (nightly) Enables `allocator-api` support. Usage is the same as `core`, using
 `new_in`, etc.
+
 `no-alloc` - It would be great if we could do this without even using `alloc`. However, `Box` might need to be made `&'static'`.
 
 # How to install?
