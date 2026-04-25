@@ -9,8 +9,8 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-iart-core = { path = "../iart-core" }
-iart-macros = { path = "../iart-macros" }
+iart-core = { workspace = true }
+iart-macros = { workspace = true }
 
 [features]
 default = ["iart-core/default"]
