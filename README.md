@@ -313,6 +313,15 @@ time.
 >
 > Suggestions are very welcome!
 
+Q: does Box::leak completely break it?(by reddit user)
+
+A: 
+> Unfortunately, that's correct. Since it's a system that triggers a sound based on 'Drop' detection, that's unfortunately how it should work.
+>
+> However, if we find an improvement for the nightly feature or something similar, we plan to gradually switch to that (as a feature)!
+> 
+> However, if it can't be detected at runtime, it's difficult to confirm whether it can be checked at compile time, so don't get your hopes up too much. 
+
 Q: Will there be any disruptive changes?
 
 A:
