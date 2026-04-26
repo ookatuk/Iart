@@ -13,6 +13,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../doc/modules/lib.md")]
 
+#[cfg(not(feature = "no-alloc"))]
 extern crate alloc;
 extern crate core;
 
@@ -31,6 +32,12 @@ pub use types::*;
 compile_error!(
     "Feature 'core_error-support' cannot be used with 'std'. \
      Please disable 'core_error-support' when building for std targets."
+);
+
+#[cfg(all(feature = "for-nightly-allocator-api-support", feature = "no-alloc"))]
+compile_error!(
+    "Feature 'for-nightly-allocator-api-support' cannot be used with 'no-alloc'. \
+     Please disable 'for-nightly-allocator-api-support' when building for no-alloc targets."
 );
 
 #[cfg(all(feature = "std", feature = "enable-default-handler"))]

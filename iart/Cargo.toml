@@ -45,3 +45,4 @@ core_error-support = ["iart-core/core_error-support"]
 enable-default-handler = ["iart-core/enable-default-handler"]
 
 for-nightly-allocator-api-support = ["iart-core/for-nightly-allocator-api-support", "iart-macros/for-nightly-allocator-api-support"]
+no-alloc = ["iart-core/no-alloc", "iart-macros/no-alloc"]

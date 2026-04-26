@@ -11,7 +11,7 @@ use std::fmt::{Display, Formatter};
 #[derive(Debug, Clone, IartErr)]
 struct MyErr {
     #[allow(unused)]
-    data: String,
+    data: &'static str,
 }
 
 impl Display for MyErr {
@@ -27,12 +27,12 @@ fn add(x: i32, y: i32) -> Iart<i32> {
 }
 
 fn error_raise() -> Iart<i32> {
-    Iart::Err(
-        MyErr {
-            data: "hi!".to_string(),
-        },
-        "example",
-    )
+    #[cfg(feature = "no-alloc")]
+    let data = &MyErr { data: "hi!" };
+    #[cfg(not(feature = "no-alloc"))]
+    let data = MyErr { data: "hi!" };
+
+    Iart::Err(data, "example")
 }
 
 fn use_try() -> Iart<i32> {

@@ -33,6 +33,7 @@ pub const fn const_str_to_usize(s: &str) -> usize {
     res
 }
 
+#[cfg(not(feature = "no-alloc"))]
 macro_rules! jen_fns {
     ($err_type:ty) => {
         (
@@ -95,6 +96,35 @@ macro_rules! jen_fns {
 
         (to_fn, from_fn)
     }};
+}
+
+#[cfg(feature = "no-alloc")]
+macro_rules! jen_fns {
+    ($err_type:ty) => {
+        (
+            (|err: &'static (dyn crate::types::IartErr + Send + Sync + 'static)| {
+                let concrete_ptr = err as *const (dyn crate::types::IartErr + Send + Sync + 'static)
+                    as *const (dyn crate::types::IartErr + Send + Sync + 'static)
+                    as *const $err_type;
+                unsafe { &(*concrete_ptr) as &'static (dyn core::any::Any + Send + Sync + 'static) }
+            })
+                as unsafe fn(
+                    &'static (dyn crate::types::IartErr + Send + Sync + 'static),
+                ) -> &'static (dyn core::any::Any + Send + Sync + 'static),
+            (|any: &'static (dyn core::any::Any + Send + Sync + 'static)| {
+                let concrete_ptr = any as *const (dyn core::any::Any + Send + Sync + 'static)
+                    as *const (dyn core::any::Any + Send + Sync + 'static)
+                    as *const $err_type;
+                unsafe {
+                    &(*concrete_ptr) as &'static (dyn crate::types::IartErr + Send + Sync + 'static)
+                }
+            })
+                as unsafe fn(
+                    &'static (dyn core::any::Any + Send + Sync + 'static),
+                )
+                    -> &'static (dyn crate::types::IartErr + Send + Sync + 'static),
+        )
+    };
 }
 
 #[allow(unused)]

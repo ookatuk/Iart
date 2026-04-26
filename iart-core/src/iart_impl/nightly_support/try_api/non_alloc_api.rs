@@ -59,12 +59,26 @@ where
     }
 }
 
+#[cfg(not(feature = "no-alloc"))]
 impl<Item, E> FromResidual<Result<Infallible, E>> for Iart<Item>
 where
     E: IartErr + 'static,
 {
     #[track_caller]
     fn from_residual(residual: Result<Infallible, E>) -> Self {
+        let err = unsafe { residual.unwrap_err_unchecked() };
+
+        Self::Err(err, None)
+    }
+}
+
+#[cfg(feature = "no-alloc")]
+impl<Item, E> FromResidual<Result<Infallible, &'static E>> for Iart<Item>
+where
+    E: IartErr + 'static,
+{
+    #[track_caller]
+    fn from_residual(residual: Result<Infallible, &'static E>) -> Self {
         let err = unsafe { residual.unwrap_err_unchecked() };
 
         Self::Err(err, None)

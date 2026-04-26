@@ -41,7 +41,4 @@ core_error-support = ["core-error"]
 enable-default-handler = ["std"]
 
 for-nightly-allocator-api-support = []
-
-
-[lints.rust]
-unexpected_cfgs = { level = "allow", check-cfg = ['cfg(feature, values("for-nightly-allocator-api-support"))'] }
+no-alloc = []
