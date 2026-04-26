@@ -27,9 +27,9 @@ fn add(x: i32, y: i32) -> Iart<i32> {
 }
 
 fn error_raise() -> Iart<i32> {
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     let data = &MyErr { data: "hi!" };
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     let data = MyErr { data: "hi!" };
 
     Iart::Err(data, "example")

@@ -8,11 +8,11 @@ use crate::types::IartLogger;
 use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails};
 use crate::utils::cold_path;
 use crate::utils::unlikely;
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 use alloc::borrow::Cow;
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 use alloc::boxed::Box;
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 use alloc::string::String;
 use core::fmt::Debug;
 use core::fmt::Display;
@@ -21,19 +21,19 @@ use core::sync::atomic::Ordering;
 
 #[cfg(feature = "allow-backtrace-logging")]
 use crate::{BACK_TRACE_MAX, TRACE_REMOVE_TYPE, TRACE_UNIQUE};
-#[cfg(all(feature = "allow-backtrace-logging", not(feature = "no-alloc")))]
+#[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
 use alloc::collections::VecDeque;
 #[cfg(feature = "allow-backtrace-logging")]
 use core::panic::Location;
 
 impl<'t, T: IartErr + ?Sized + 't> IartErr for &'t T {
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     fn clone_box(&self) -> Box<dyn IartErr + Send + Sync> {
         (**self).clone_box()
     }
 }
 
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 impl Clone for Box<dyn IartErr> {
     fn clone(&self) -> Self {
         (**self).clone_box()
@@ -41,14 +41,14 @@ impl Clone for Box<dyn IartErr> {
 }
 
 impl IartErr for DummyErr {
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     fn clone_box(&self) -> Box<dyn IartErr + Send + Sync> {
         Box::new(DummyErr {})
     }
 }
 
 impl Clone for ErrorDetail {
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     fn clone(&self) -> Self {
         let ty: Option<Box<dyn IartErr + Send + Sync>> =
             { self.ty.as_ref().map(|b| b.clone_box()) };
@@ -59,7 +59,7 @@ impl Clone for ErrorDetail {
             trans_fns: self.trans_fns,
         }
     }
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     fn clone(&self) -> Self {
         Self {
             ty: self.ty,
@@ -77,7 +77,7 @@ impl core::fmt::Display for ErrorDetail {
 
 impl<Item> Iart<Item> {
     #[doc = include_str!("../../../../doc/fn/Iart/send_log_to_handler.md")]
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     pub(crate) fn send_log_to_handler<const NO_RET_ERR: bool>(
         &self,
         event: IartEvent,
@@ -115,7 +115,7 @@ impl<Item> Iart<Item> {
     }
 
     #[doc = include_str!("../../../../doc/fn/Iart/send_log_to_handler.md")]
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     pub(crate) fn send_log_to_handler<const NO_RET_ERR: bool>(
         &self,
         event: IartEvent,
@@ -157,7 +157,7 @@ impl<Item> Iart<Item> {
 
     #[inline]
     #[allow(non_snake_case)]
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Ok.md")]
     pub fn Ok(item: Item) -> Self {
         Self {
@@ -179,7 +179,7 @@ impl<Item> Iart<Item> {
 
     #[inline]
     #[allow(non_snake_case)]
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Ok.md")]
     pub fn Ok(item: Item) -> Self {
         Self {
@@ -206,7 +206,7 @@ impl<Item> Iart<Item> {
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err.md")]
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     pub fn Err<ERR: IartErr + 'static>(error: ERR, desc: impl Into<Option<&'static str>>) -> Self {
         let to_any = jen_fns!(ERR);
 
@@ -234,7 +234,7 @@ impl<Item> Iart<Item> {
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err.md")]
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     pub fn Err<ERR: IartErr + 'static>(
         error: &'static ERR,
         desc: impl Into<Option<&'static str>>,
@@ -263,7 +263,7 @@ impl<Item> Iart<Item> {
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err_string.md")]
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     pub fn Err_string<ERR: IartErr + 'static>(error: ERR, desc: impl Into<Option<String>>) -> Self {
         let to_any = jen_fns!(ERR);
         let detail = Box::new(unsafe {
@@ -319,7 +319,7 @@ impl<Item> Iart<Item> {
     #[must_use]
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/err.md")]
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     pub fn err(mut self) -> Result<(Box<ErrorDetail>, Option<Item>), Self> {
         self.handled = true;
 
@@ -356,7 +356,7 @@ impl<Item> Iart<Item> {
     #[must_use]
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/err.md")]
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     pub fn err(mut self) -> Result<(ErrorDetail, Option<Item>), Self> {
         self.handled = true;
 
@@ -434,7 +434,7 @@ impl<Item> Iart<Item> {
 
     #[track_caller]
     #[must_use]
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     #[doc = include_str!("../../../../doc/fn/Iart/unwrap_err.md")]
     pub fn unwrap_err(mut self) -> (Box<ErrorDetail>, Option<Item>)
     where
@@ -465,7 +465,7 @@ impl<Item> Iart<Item> {
 
     #[track_caller]
     #[must_use]
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../../../../doc/fn/Iart/unwrap_err.md")]
     pub fn unwrap_err(mut self) -> (ErrorDetail, Option<Item>)
     where
@@ -513,7 +513,7 @@ impl<Item> Iart<Item> {
 
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/send_log.md")]
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     pub fn send_log(&mut self) {
         #[cfg(feature = "allow-backtrace-logging")]
         {
@@ -560,7 +560,7 @@ impl<Item> Iart<Item> {
 
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/send_log.md")]
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     pub fn send_log(&mut self) {
         #[cfg(feature = "allow-backtrace-logging")]
         {
@@ -614,7 +614,7 @@ impl<Item> Iart<Item> {
     #[inline]
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/from_option.md")]
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     pub fn from_option<ERR: IartErr + 'static>(
         data: Option<Item>,
         e_type: ERR,
@@ -631,7 +631,7 @@ impl<Item> Iart<Item> {
     #[inline]
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/from_option.md")]
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     pub fn from_option<ERR: IartErr + 'static>(
         data: Option<Item>,
         e_type: &'static ERR,
@@ -759,7 +759,7 @@ impl<T: Debug> Debug for Iart<T> {
 }
 
 impl<Item: Clone> Clone for Iart<Item> {
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     fn clone(&self) -> Self {
         let new_data = self.data.as_ref().map(|d| match d {
             Ok(item) => Ok(item.clone()),
@@ -777,7 +777,7 @@ impl<Item: Clone> Clone for Iart<Item> {
         }
     }
 
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     fn clone(&self) -> Self {
         let new_data = self.data.as_ref().map(|d| match d {
             Ok(item) => Ok(item.clone()),
@@ -797,7 +797,7 @@ impl<Item: Clone> Clone for Iart<Item> {
 }
 
 impl<T> Default for Iart<T> {
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     fn default() -> Self {
         Self {
             data: Some(Err(Box::new(ErrorDetail::default()))),
@@ -814,7 +814,7 @@ impl<T> Default for Iart<T> {
         }
     }
 
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     fn default() -> Self {
         Self {
             data: Some(Err(ErrorDetail::default())),
@@ -834,7 +834,7 @@ impl<T> Default for Iart<T> {
 
 impl ErrorDetail {
     #[doc = include_str!("../../../../doc/fn/ErrorDetail/new.md")]
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     pub unsafe fn new(
         ty: Box<dyn IartErr + Send + Sync>,
         desc: Option<Cow<'static, str>>,
@@ -851,7 +851,7 @@ impl ErrorDetail {
     }
 
     #[doc = include_str!("../../../../doc/fn/ErrorDetail/new.md")]
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     pub unsafe fn new(
         ty: &'static (dyn IartErr + Send + Sync),
         desc: Option<&'static str>,
@@ -872,7 +872,7 @@ impl ErrorDetail {
     }
 }
 
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 impl<T, E: IartErr + 'static + Send + Sync> From<Result<T, E>> for Iart<T> {
     #[track_caller]
     fn from(res: Result<T, E>) -> Self {
@@ -883,7 +883,7 @@ impl<T, E: IartErr + 'static + Send + Sync> From<Result<T, E>> for Iart<T> {
     }
 }
 
-#[cfg(feature = "no-alloc")]
+#[cfg(not(feature = "alloc"))]
 impl<T, E: IartErr + 'static + Send + Sync> From<Result<T, &'static E>> for Iart<T> {
     #[track_caller]
     fn from(res: Result<T, &'static E>) -> Self {
@@ -894,7 +894,7 @@ impl<T, E: IartErr + 'static + Send + Sync> From<Result<T, &'static E>> for Iart
     }
 }
 
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 impl<T> From<Result<T, Box<ErrorDetail>>> for Iart<T> {
     #[track_caller]
     fn from(res: Result<T, Box<ErrorDetail>>) -> Self {
@@ -911,7 +911,7 @@ impl<T> From<Result<T, Box<ErrorDetail>>> for Iart<T> {
     }
 }
 
-#[cfg(feature = "no-alloc")]
+#[cfg(not(feature = "alloc"))]
 impl<T> From<Result<T, ErrorDetail>> for Iart<T> {
     #[track_caller]
     fn from(res: Result<T, ErrorDetail>) -> Self {

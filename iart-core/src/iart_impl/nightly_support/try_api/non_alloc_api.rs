@@ -59,7 +59,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 impl<Item, E> FromResidual<Result<Infallible, E>> for Iart<Item>
 where
     E: IartErr + 'static,
@@ -72,7 +72,7 @@ where
     }
 }
 
-#[cfg(feature = "no-alloc")]
+#[cfg(not(feature = "alloc"))]
 impl<Item, E> FromResidual<Result<Infallible, &'static E>> for Iart<Item>
 where
     E: IartErr + 'static,

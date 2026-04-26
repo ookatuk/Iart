@@ -33,7 +33,7 @@ pub const fn const_str_to_usize(s: &str) -> usize {
     res
 }
 
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 macro_rules! jen_fns {
     ($err_type:ty) => {
         (
@@ -98,7 +98,7 @@ macro_rules! jen_fns {
     }};
 }
 
-#[cfg(feature = "no-alloc")]
+#[cfg(not(feature = "alloc"))]
 macro_rules! jen_fns {
     ($err_type:ty) => {
         (

@@ -5,7 +5,7 @@ use core::panic::Location;
 
 impl<Item> Iart<Item> {
     #[doc = include_str!("../../../doc/fn/Iart/for_each_log.md")]
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     pub fn for_each_log<F>(&self, #[allow(unused)] mut f: F)
     where
         F: FnMut(&'static Location<'static>) -> bool,
@@ -25,7 +25,7 @@ impl<Item> Iart<Item> {
     }
 
     #[doc = include_str!("../../../doc/fn/Iart/for_each_log.md")]
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     pub fn for_each_log<F>(&self, #[allow(unused)] mut f: F)
     where
         F: FnMut(&Option<&'static Location<'static>>) -> bool,

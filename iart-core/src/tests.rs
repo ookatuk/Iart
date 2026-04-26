@@ -10,12 +10,12 @@ use spin::Mutex;
 #[cfg(feature = "for-nightly-allocator-api-support")]
 use alloc::alloc::Global;
 
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 use alloc::boxed::Box;
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
-#[cfg(feature = "no-alloc")]
+#[cfg(not(feature = "alloc"))]
 const LOG_SIZE: usize = 64;
 
 static TEST_LOG_LOCK: Mutex<()> = Mutex::new(());
@@ -29,7 +29,7 @@ impl Display for MyError {
     }
 }
 
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 impl IartErr for MyError {
     #[cfg(not(feature = "for-nightly-allocator-api-support"))]
     fn clone_box(&self) -> Box<dyn IartErr + Send + Sync> {
@@ -44,14 +44,14 @@ impl IartErr for MyError {
     }
 }
 
-#[cfg(feature = "no-alloc")]
+#[cfg(not(feature = "alloc"))]
 impl IartErr for MyError {}
 
 impl core::error::Error for MyError {}
 
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 static LOG_HISTORY: Mutex<Vec<&'static str>> = Mutex::new(Vec::new());
-#[cfg(feature = "no-alloc")]
+#[cfg(not(feature = "alloc"))]
 static LOG_HISTORY: Mutex<[Option<&'static str>; LOG_SIZE]> = Mutex::new([None; LOG_SIZE]);
 
 #[cfg(feature = "for-nightly-allocator-api-support")]
@@ -77,9 +77,9 @@ fn test_logger(event: IartEvent, _details: IartHandleDetails) -> core::fmt::Resu
         IartEvent::FunctionHook(_) => "auto_request",
         _ => "other",
     };
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     history.push(msg);
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     {
         let mut target: usize = LOG_SIZE;
 
@@ -101,9 +101,9 @@ fn test_logger(event: IartEvent, _details: IartHandleDetails) -> core::fmt::Resu
 }
 
 fn clear() {
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     let _ = LOG_HISTORY.lock().clear();
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     {
         *LOG_HISTORY.lock() = [None; LOG_SIZE];
     }
@@ -131,9 +131,9 @@ fn test_handler_invocation() {
     assert_eq!(val, 100);
     let history = LOG_HISTORY.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     assert!(history.contains(&"auto_request"));
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     assert!(history.contains(&Some("auto_request")));
 }
 
@@ -142,11 +142,11 @@ fn test_handler_invocation() {
 fn test_backtrace_logging() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     fn fail_point() -> Iart<i32> {
         Iart::Err(MyError, None)
     }
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     fn fail_point() -> Iart<i32> {
         Iart::Err(&MyError, None)
     }
@@ -180,18 +180,18 @@ fn test_from_option() {
 
     let opt = Some(50);
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     let w = Iart::from_option(opt, MyError, None);
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     let w = Iart::from_option(opt, &MyError, None);
 
     assert_eq!(w.unwrap(), 50);
 
     let opt_none: Option<i32> = None;
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     let w_err = Iart::from_option(opt_none, MyError, Some("none error"));
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     let w_err = Iart::from_option(opt_none, &MyError, None);
 
     assert!(w_err.is_err().unwrap());
@@ -218,12 +218,12 @@ fn test_try_ok_flow() {
 fn test_try_err_flow() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     fn f() -> Iart<i32> {
         let _ = Iart::Err(MyError, Some("test"))?;
         unreachable!();
     }
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     fn f() -> Iart<i32> {
         let _ = Iart::Err(&MyError, Some("test"))?;
         unreachable!();
@@ -257,16 +257,16 @@ fn test_drop_without_handling() {
     clear();
 
     {
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         let _w: Iart<i32> = Iart::Err(MyError, "a");
-        #[cfg(feature = "no-alloc")]
+        #[cfg(not(feature = "alloc"))]
         let _w: Iart<i32> = Iart::Err(&MyError, "a");
     }
 
     let history = LOG_HISTORY.lock();
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     assert!(history.contains(&"dropped"));
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     assert!(history.contains(&Some("dropped")));
 }
 
@@ -287,9 +287,9 @@ fn test_drop_without_handling_ok_version() {
 
     let history = LOG_HISTORY.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     assert!(history.contains(&"dropped"));
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     assert!(history.contains(&Some("dropped")));
 }
 
@@ -317,9 +317,9 @@ fn test_clone_iart() {
 fn test_error_preserved() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     let w: Iart<i32> = Iart::Err(MyError, "msg");
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     let w: Iart<i32> = Iart::Err(&MyError, "msg");
 
     let err = w.unwrap_err().0;
@@ -351,9 +351,9 @@ fn test_no_drop_after_unwrap() {
 
     let history = LOG_HISTORY.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     assert!(!history.contains(&"dropped"));
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     assert!(!history.contains(&Some("dropped")));
 }
 
@@ -372,9 +372,9 @@ fn test_drop_without_handling_if_panic_raised() {
     }
 
     let _ = std::panic::catch_unwind(|| {
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         let _w: Iart<i32> = Iart::Err(MyError, "panic test");
-        #[cfg(feature = "no-alloc")]
+        #[cfg(not(feature = "alloc"))]
         let _w: Iart<i32> = Iart::Err(&MyError, "panic test");
 
         panic!("intentional panic");
@@ -382,13 +382,13 @@ fn test_drop_without_handling_if_panic_raised() {
 
     let history = LOG_HISTORY.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     assert!(
         !history.contains(&"dropped"),
         "Should not log 'dropped' event during panic unwinding to avoid double panic."
     );
 
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     assert!(
         !history.contains(&Some("dropped")),
         "Should not log 'dropped' event during panic unwinding to avoid double panic."
@@ -400,9 +400,9 @@ fn test_downcast_to_original_error() {
     let _guard = TEST_LOG_LOCK.lock();
 
     let w = {
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         let w: Iart<i32> = Iart::Err(crate::tests::MyError, "TEST");
-        #[cfg(feature = "no-alloc")]
+        #[cfg(not(feature = "alloc"))]
         let w: Iart<i32> = Iart::Err(&MyError, "TEST");
 
         w
@@ -410,9 +410,9 @@ fn test_downcast_to_original_error() {
 
     let detail = unsafe { w.try_downcast::<MyError>().expect("failed to downcast.") };
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     assert_eq!(detail.1.desc.unwrap().as_ref(), "TEST");
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     assert_eq!(detail.1.desc.unwrap(), "TEST");
 }
 
@@ -421,9 +421,9 @@ fn new_version_ok_and_err() {
     let _guard = TEST_LOG_LOCK.lock();
 
     let mut w = {
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         let w: Iart<i32> = Iart::Err(MyError, "TEST");
-        #[cfg(feature = "no-alloc")]
+        #[cfg(not(feature = "alloc"))]
         let w: Iart<i32> = Iart::Err(&MyError, "TEST");
 
         w
@@ -454,22 +454,22 @@ fn new_version_ok_and_err() {
 fn cast_from() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     fn f() -> Result<u32, MyError> {
         Err(MyError)
     }
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     fn f2() -> Result<u32, MyError> {
         Ok(56)
     }
 
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     fn f() -> Result<u32, &'static MyError> {
         Err(&MyError)
     }
 
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     fn f2() -> Result<u32, &'static MyError> {
         Ok(56)
     }
@@ -487,11 +487,11 @@ fn cast_from() {
 fn test_error_item() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     fn test() -> Iart<u32> {
         Iart::Err_item(MyError, "error", 5)
     }
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     fn test() -> Iart<u32> {
         Iart::Err_item(&MyError, "error", 5)
     }
@@ -519,9 +519,9 @@ fn test_map_and_handled_trace() {
 fn test_map_err_item_transform() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     let res = Iart::<u32>::Err_item(MyError, "msg", 10);
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     let res = Iart::<u32>::Err_item(&MyError, "msg", 10);
 
     let res2 = res.map_err_item(|x| x, |item| item * 2);
@@ -536,9 +536,9 @@ fn test_map_err_item_transform() {
 fn to_result() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     let res = Iart::<u32>::Err(MyError, "msg");
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     let res = Iart::<u32>::Err(&MyError, "msg");
 
     let res2 = Iart::<u32>::Ok(5);

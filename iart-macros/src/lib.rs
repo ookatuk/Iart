@@ -95,16 +95,14 @@ pub fn derive_iart_err(item: TokenStream) -> TokenStream {
         }
     };
 
-    #[cfg(all(
-        not(feature = "for-nightly-allocator-api-support"),
-        not(feature = "no-alloc")
-    ))]
+    #[cfg(all(not(feature = "for-nightly-allocator-api-support"), feature = "alloc"))]
     let body = quote! {
             fn clone_box(&self) -> Box<dyn ::iart::prelude::IartErr + Send + Sync + 'static> {
             Box::new(self.clone())
         }
     };
-    #[cfg(feature = "no-alloc")]
+
+    #[cfg(not(feature = "alloc"))]
     let body = quote! {};
 
     let expanded = quote! {

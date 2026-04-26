@@ -20,7 +20,7 @@ spin.workspace = true
 [features]
 default = ["std", "allow-backtrace-logging", "check-unused-result", "enable-default-handler"]
 
-std = ["core-error/std"]
+std = ["core-error/std", "alloc"]
 
 for-nightly-likely-optimization = []
 for-nightly-error-generic-member-access = []
@@ -40,5 +40,5 @@ error-can-have-item = []
 core_error-support = ["core-error"]
 enable-default-handler = ["std"]
 
-for-nightly-allocator-api-support = []
-no-alloc = []
+for-nightly-allocator-api-support = ["alloc"]
+alloc = []

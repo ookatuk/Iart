@@ -5,20 +5,20 @@
 #[doc = include_str!("../doc/structs/ErrorDetail.md")]
 #[cfg(feature = "for-nightly-allocator-api-support")]
 pub struct ErrorDetail<A: alloc::alloc::Allocator + Clone = alloc::alloc::Global> {
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     #[doc = include_str!("../doc/variable/ErrorDetail/ty.md")]
     pub ty: Option<Box<dyn IartErr<A> + Send + Sync, A>>,
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../doc/variable/ErrorDetail/ty.md")]
     pub ty: Option<&'static (dyn IartErr<A> + Send + Sync, A)>,
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     #[doc = include_str!("../doc/variable/global/trans_fns.md")]
     pub(crate) trans_fns: (
         unsafe fn(Box<dyn IartErr<A> + Send + Sync, A>) -> Box<dyn core::any::Any + Send + Sync, A>,
         unsafe fn(Box<dyn core::any::Any + Send + Sync, A>) -> Box<dyn IartErr<A> + Send + Sync, A>,
     ),
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../doc/variable/global/trans_fns.md")]
     pub(crate) trans_fns: (
         unsafe fn(
@@ -29,10 +29,10 @@ pub struct ErrorDetail<A: alloc::alloc::Allocator + Clone = alloc::alloc::Global
         ) -> &'static (dyn IartErr<A> + Send + Sync),
     ),
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     #[doc = include_str!("../doc/variable/ErrorDetail/desc.md")]
     pub desc: Option<Cow<'static, str>>,
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../doc/variable/ErrorDetail/desc.md")]
     pub desc: Option<&'static str>,
 }
@@ -42,20 +42,20 @@ pub struct ErrorDetail<A: alloc::alloc::Allocator + Clone = alloc::alloc::Global
 #[doc = include_str!("../doc/structs/ErrorDetail.md")]
 #[cfg(not(feature = "for-nightly-allocator-api-support"))]
 pub struct ErrorDetail {
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     #[doc = include_str!("../doc/variable/ErrorDetail/ty.md")]
     pub ty: Option<Box<dyn IartErr + Send + Sync>>,
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../doc/variable/ErrorDetail/ty.md")]
     pub ty: Option<&'static (dyn IartErr + Send + Sync)>,
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     #[doc = include_str!("../doc/variable/global/trans_fns.md")]
     pub(crate) trans_fns: (
         unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
         unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
     ),
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../doc/variable/global/trans_fns.md")]
     pub(crate) trans_fns: (
         unsafe fn(
@@ -66,23 +66,23 @@ pub struct ErrorDetail {
         ) -> &'static (dyn IartErr + Send + Sync),
     ),
 
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     #[doc = include_str!("../doc/variable/ErrorDetail/desc.md")]
     pub desc: Option<Cow<'static, str>>,
-    #[cfg(feature = "no-alloc")]
+    #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../doc/variable/ErrorDetail/desc.md")]
     pub desc: Option<&'static str>,
 }
 
 #[cfg(not(feature = "for-nightly-allocator-api-support"))]
 mod non_api_impl {
-    #[cfg(all(feature = "no-alloc", feature = "allow-backtrace-logging"))]
+    #[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
     use crate::BACK_TRACE_MAX;
     use crate::events::IartEvent;
     use crate::types::ErrorDetail;
-    #[cfg(not(feature = "no-alloc"))]
+    #[cfg(feature = "alloc")]
     use alloc::boxed::Box;
-    #[cfg(all(feature = "allow-backtrace-logging", not(feature = "no-alloc")))]
+    #[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
     use alloc::collections::VecDeque;
     use core::fmt::{Debug, Display};
     #[cfg(feature = "allow-backtrace-logging")]
@@ -95,7 +95,7 @@ mod non_api_impl {
     #[doc = include_str!("../doc/trait/IartErr.md")]
     #[must_use]
     pub trait IartErr: Debug + Display + Send + Sync {
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         fn clone_box(&self) -> Box<dyn IartErr + Send + Sync>;
     }
 
@@ -103,7 +103,7 @@ mod non_api_impl {
     #[must_use]
     #[doc = include_str!("../doc/trait/IartErr.md")]
     pub trait IartErr: Debug + Display + core::error::Error + Send + Sync {
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         fn clone_box(&self) -> Box<dyn IartErr + Send + Sync>;
     }
 
@@ -112,19 +112,19 @@ mod non_api_impl {
     #[doc = include_str!("../doc/structs/IartHandleDetails.md")]
     pub struct IartHandleDetails<'a> {
         #[doc = include_str!("../doc/variable/IartHandleDetails/detail.md")]
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         pub detail: Option<&'a Box<ErrorDetail>>,
-        #[cfg(feature = "no-alloc")]
+        #[cfg(not(feature = "alloc"))]
         #[doc = include_str!("../doc/variable/IartHandleDetails/detail.md")]
         pub detail: Option<&'a ErrorDetail>,
 
         pub is_err: Option<bool>,
 
         #[doc = include_str!("../doc/variable/IartHandleDetails/log.md")]
-        #[cfg(all(feature = "allow-backtrace-logging", not(feature = "no-alloc")))]
+        #[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
         pub log: Option<&'a VecDeque<&'static Location<'static>>>,
         #[doc = include_str!("../doc/variable/IartHandleDetails/log.md")]
-        #[cfg(all(feature = "allow-backtrace-logging", feature = "no-alloc"))]
+        #[cfg(all(feature = "allow-backtrace-logging", not(feature = "alloc")))]
         pub log: Option<&'a [Option<&'static Location<'static>>]>,
     }
 
@@ -135,9 +135,9 @@ mod non_api_impl {
         pub(crate) handled: bool,
 
         #[doc = include_str!("../doc/variable/Iart/data.md")]
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         pub(crate) data: Option<Result<Item, Box<ErrorDetail>>>,
-        #[cfg(feature = "no-alloc")]
+        #[cfg(not(feature = "alloc"))]
         #[doc = include_str!("../doc/variable/Iart/data.md")]
         pub(crate) data: Option<Result<Item, ErrorDetail>>,
 
@@ -145,21 +145,21 @@ mod non_api_impl {
         #[doc = include_str!("../doc/variable/Iart/err_item.md")]
         pub(crate) err_item: Option<Item>,
 
-        #[cfg(all(feature = "allow-backtrace-logging", not(feature = "no-alloc")))]
+        #[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
         #[doc = include_str!("../doc/variable/Iart/log.md")]
         pub(crate) log: Option<VecDeque<&'static Location<'static>>>,
 
-        #[cfg(all(feature = "allow-backtrace-logging", feature = "no-alloc"))]
+        #[cfg(all(feature = "allow-backtrace-logging", not(feature = "alloc")))]
         #[doc = include_str!("../doc/variable/Iart/log.md")]
         pub(crate) log: Option<[Option<&'static Location<'static>>; BACK_TRACE_MAX]>,
 
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         #[doc = include_str!("../doc/variable/global/trans_fns.md")]
         pub(crate) trans_fns: Option<(
             unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
             unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
         )>,
-        #[cfg(feature = "no-alloc")]
+        #[cfg(not(feature = "alloc"))]
         #[doc = include_str!("../doc/variable/global/trans_fns.md")]
         pub(crate) trans_fns: Option<(
             unsafe fn(
@@ -192,7 +192,7 @@ mod api_impl {
     where
         Self: 'static,
     {
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         fn clone_box_in<'a>(&self, alloc: A) -> Box<dyn IartErr<A> + 'a + Send + Sync, A>
         where
             Self: 'a;
@@ -202,7 +202,7 @@ mod api_impl {
     #[must_use]
     #[doc = include_str!("../doc/trait/IartErr.md")]
     pub trait IartErr<A: Allocator + Clone = alloc::alloc::Global>: Debug + Display {
-        #[cfg(not(feature = "no-alloc"))]
+        #[cfg(feature = "alloc")]
         fn clone_box_in<'a>(&self, alloc: A) -> Box<dyn IartErr<A> + 'a + Send + Sync, A>
         where
             Self: 'a;
@@ -264,9 +264,9 @@ pub use api_impl::*;
 #[doc(inline)]
 pub use non_api_impl::*;
 
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 use alloc::borrow::Cow;
-#[cfg(not(feature = "no-alloc"))]
+#[cfg(feature = "alloc")]
 use alloc::boxed::Box;
 use core::fmt::{Display, Formatter};
 
