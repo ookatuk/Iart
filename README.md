@@ -256,10 +256,9 @@ A:
 ## Features
 
 `std`
-> This enables the standard format of the dependent crate.
->
-> It is also used as a criterion for determining whether something is standard,
-> It is also used for other purposes, such as enabling/disabling panic checks during `std` builds.
+> Enables std library support.
+> This allows the use of standard types like [`std::error::Error`] and enables std-specific optimizations or panic
+> behaviors.
 
 `for-nightly-likely-optimization` - (nightly) Unlikely and cold_path are placed in areas where abnormal processing occurs, and the placement of paths that are normally accessed is optimized.
 
@@ -303,9 +302,9 @@ A:
 `for-nightly-allocator-api-support` - (nightly) Enables `allocator-api` support. Usage is the same as `core`, using
 `new_in`, etc.
 
-### Todo Features
-
-`no-alloc` - It would be great if we could do this without even using `alloc`. However, `Box` might need to be made `&'static'`.
+`no-alloc`
+> Supports static references instead of Box.
+> Incompatible with for-nightly-allocator-api-support.
 
 # How to install?
 `cargo add iart`
