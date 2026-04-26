@@ -11,8 +11,8 @@ categories.workspace = true
 readme = "../README.md"
 
 [dependencies]
-iart-core = { workspace = true }
-iart-macros = { workspace = true }
+iart-core = { workspace = true, default-features = false }
+iart-macros = { workspace = true, default-features = false }
 
 [features]
 default = ["iart-core/default"]
