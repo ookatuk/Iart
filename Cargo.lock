@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "iart"
-version = "0.1.7"
+version = "1.0.0"
 dependencies = [
  "iart-core",
  "iart-macros",
@@ -21,7 +21,7 @@ dependencies = [
 
 [[package]]
 name = "iart-core"
-version = "0.1.7"
+version = "1.0.0"
 dependencies = [
  "core-error",
  "spin",
@@ -29,7 +29,7 @@ dependencies = [
 
 [[package]]
 name = "iart-macros"
-version = "0.1.7"
+version = "1.0.0"
 dependencies = [
  "iart-core",
  "quote",
