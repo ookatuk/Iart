@@ -400,7 +400,7 @@ A:
 >
 > `UB` only occurs when two different types are involved.
 
-Q: why `0.x.x`?
+Q: why `0.x.x`?(Unfortunately, this may continue during the `1.0.x` period.)
 
 A:
 > The bug detection rate differs between individual use and use by many people, so future fixes are possible.
