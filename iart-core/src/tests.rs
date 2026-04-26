@@ -3,14 +3,20 @@ use crate::set_handler;
 use crate::types::Iart;
 use crate::types::IartErr;
 use crate::types::IartHandleDetails;
-#[cfg(feature = "for-nightly-allocator-api-support")]
-use alloc::alloc::Global;
-use alloc::boxed::Box;
-use alloc::string::String;
-use alloc::string::ToString;
-use alloc::vec::Vec;
+
 use core::fmt::{Display, Formatter};
 use spin::Mutex;
+
+#[cfg(feature = "for-nightly-allocator-api-support")]
+use alloc::alloc::Global;
+
+#[cfg(not(feature = "no-alloc"))]
+use alloc::boxed::Box;
+#[cfg(not(feature = "no-alloc"))]
+use alloc::vec::Vec;
+
+#[cfg(feature = "no-alloc")]
+const LOG_SIZE: usize = 64;
 
 static TEST_LOG_LOCK: Mutex<()> = Mutex::new(());
 
@@ -23,6 +29,7 @@ impl Display for MyError {
     }
 }
 
+#[cfg(not(feature = "no-alloc"))]
 impl IartErr for MyError {
     #[cfg(not(feature = "for-nightly-allocator-api-support"))]
     fn clone_box(&self) -> Box<dyn IartErr + Send + Sync> {
@@ -37,9 +44,15 @@ impl IartErr for MyError {
     }
 }
 
+#[cfg(feature = "no-alloc")]
+impl IartErr for MyError {}
+
 impl core::error::Error for MyError {}
 
-static LOG_HISTORY: Mutex<Vec<String>> = Mutex::new(Vec::new());
+#[cfg(not(feature = "no-alloc"))]
+static LOG_HISTORY: Mutex<Vec<&'static str>> = Mutex::new(Vec::new());
+#[cfg(feature = "no-alloc")]
+static LOG_HISTORY: Mutex<[Option<&'static str>; LOG_SIZE]> = Mutex::new([None; LOG_SIZE]);
 
 #[cfg(feature = "for-nightly-allocator-api-support")]
 fn test_logger<A: Clone + core::alloc::Allocator>(
@@ -48,9 +61,9 @@ fn test_logger<A: Clone + core::alloc::Allocator>(
 ) -> core::fmt::Result {
     let mut history = LOG_HISTORY.lock();
     let msg = match event {
-        IartEvent::DroppedWithoutCheck => "dropped".to_string(),
-        IartEvent::FunctionHook(_) => "auto_request".to_string(),
-        _ => "other".to_string(),
+        IartEvent::DroppedWithoutCheck => "dropped",
+        IartEvent::FunctionHook(_) => "auto_request",
+        _ => "other",
     };
     history.push(msg);
     Ok(())
@@ -60,12 +73,40 @@ fn test_logger<A: Clone + core::alloc::Allocator>(
 fn test_logger(event: IartEvent, _details: IartHandleDetails) -> core::fmt::Result {
     let mut history = LOG_HISTORY.lock();
     let msg = match event {
-        IartEvent::DroppedWithoutCheck => "dropped".to_string(),
-        IartEvent::FunctionHook(_) => "auto_request".to_string(),
-        _ => "other".to_string(),
+        IartEvent::DroppedWithoutCheck => "dropped",
+        IartEvent::FunctionHook(_) => "auto_request",
+        _ => "other",
     };
+    #[cfg(not(feature = "no-alloc"))]
     history.push(msg);
+    #[cfg(feature = "no-alloc")]
+    {
+        let mut target: usize = LOG_SIZE;
+
+        for i in history.iter_mut().rev() {
+            if i.is_some() {
+                break;
+            }
+            target -= 1;
+        }
+
+        if LOG_SIZE == target {
+            target -= 1
+        }
+
+        history[target] = Some(msg);
+    }
+
     Ok(())
+}
+
+fn clear() {
+    #[cfg(not(feature = "no-alloc"))]
+    let _ = LOG_HISTORY.lock().clear();
+    #[cfg(feature = "no-alloc")]
+    {
+        *LOG_HISTORY.lock() = [None; LOG_SIZE];
+    }
 }
 
 #[test]
@@ -82,16 +123,18 @@ fn test_ok_behavior() {
 fn test_handler_invocation() {
     let _guard = TEST_LOG_LOCK.lock();
     set_handler(test_logger);
-    {
-        let _history = LOG_HISTORY.lock().clear();
-    }
+    clear();
 
     let w: Iart<i32> = Iart::Ok(100);
     let val = w.unwrap();
 
     assert_eq!(val, 100);
     let history = LOG_HISTORY.lock();
-    assert!(history.contains(&"auto_request".to_string()));
+
+    #[cfg(not(feature = "no-alloc"))]
+    assert!(history.contains(&"auto_request"));
+    #[cfg(feature = "no-alloc")]
+    assert!(history.contains(&Some("auto_request")));
 }
 
 #[test]
@@ -99,21 +142,26 @@ fn test_handler_invocation() {
 fn test_backtrace_logging() {
     let _guard = TEST_LOG_LOCK.lock();
 
+    #[cfg(not(feature = "no-alloc"))]
     fn fail_point() -> Iart<i32> {
         Iart::Err(MyError, None)
+    }
+    #[cfg(feature = "no-alloc")]
+    fn fail_point() -> Iart<i32> {
+        Iart::Err(&MyError, None)
     }
 
     let mut w = fail_point();
     w.send_log();
 
-    let mut locations = Vec::new();
+    let mut len = 0;
 
-    w.for_each_log(|loc| {
-        locations.push(loc);
+    w.for_each_log(|_| {
+        len += 1;
         false
     });
 
-    assert!(locations.len() >= 1);
+    assert!(len >= 1);
     let _ = w.unwrap_err();
 }
 
@@ -131,11 +179,20 @@ fn test_from_option() {
     let _guard = TEST_LOG_LOCK.lock();
 
     let opt = Some(50);
+
+    #[cfg(not(feature = "no-alloc"))]
     let w = Iart::from_option(opt, MyError, None);
+    #[cfg(feature = "no-alloc")]
+    let w = Iart::from_option(opt, &MyError, None);
+
     assert_eq!(w.unwrap(), 50);
 
     let opt_none: Option<i32> = None;
+
+    #[cfg(not(feature = "no-alloc"))]
     let w_err = Iart::from_option(opt_none, MyError, Some("none error"));
+    #[cfg(feature = "no-alloc")]
+    let w_err = Iart::from_option(opt_none, &MyError, None);
 
     assert!(w_err.is_err().unwrap());
     let _ = w_err.unwrap_err();
@@ -161,8 +218,14 @@ fn test_try_ok_flow() {
 fn test_try_err_flow() {
     let _guard = TEST_LOG_LOCK.lock();
 
+    #[cfg(not(feature = "no-alloc"))]
     fn f() -> Iart<i32> {
         let _ = Iart::Err(MyError, Some("test"))?;
+        unreachable!();
+    }
+    #[cfg(feature = "no-alloc")]
+    fn f() -> Iart<i32> {
+        let _ = Iart::Err(&MyError, Some("test"))?;
         unreachable!();
     }
 
@@ -191,14 +254,20 @@ fn test_drop_without_handling() {
     let _guard = TEST_LOG_LOCK.lock();
 
     set_handler(test_logger);
-    LOG_HISTORY.lock().clear();
+    clear();
 
     {
-        let _w: Iart<i32> = Iart::Err(MyError {}, "a");
+        #[cfg(not(feature = "no-alloc"))]
+        let _w: Iart<i32> = Iart::Err(MyError, "a");
+        #[cfg(feature = "no-alloc")]
+        let _w: Iart<i32> = Iart::Err(&MyError, "a");
     }
 
     let history = LOG_HISTORY.lock();
-    assert!(history.contains(&"dropped".to_string()));
+    #[cfg(not(feature = "no-alloc"))]
+    assert!(history.contains(&"dropped"));
+    #[cfg(feature = "no-alloc")]
+    assert!(history.contains(&Some("dropped")));
 }
 
 #[test]
@@ -210,14 +279,18 @@ fn test_drop_without_handling_ok_version() {
     let _guard = TEST_LOG_LOCK.lock();
 
     set_handler(test_logger);
-    LOG_HISTORY.lock().clear();
+    clear();
 
     {
         let _w: Iart<i32> = Iart::Ok(5);
     }
 
     let history = LOG_HISTORY.lock();
-    assert!(history.contains(&"dropped".to_string()));
+
+    #[cfg(not(feature = "no-alloc"))]
+    assert!(history.contains(&"dropped"));
+    #[cfg(feature = "no-alloc")]
+    assert!(history.contains(&Some("dropped")));
 }
 
 #[test]
@@ -244,7 +317,11 @@ fn test_clone_iart() {
 fn test_error_preserved() {
     let _guard = TEST_LOG_LOCK.lock();
 
+    #[cfg(not(feature = "no-alloc"))]
     let w: Iart<i32> = Iart::Err(MyError, "msg");
+    #[cfg(feature = "no-alloc")]
+    let w: Iart<i32> = Iart::Err(&MyError, "msg");
+
     let err = w.unwrap_err().0;
 
     assert_eq!(err.desc.unwrap(), "msg");
@@ -265,7 +342,7 @@ fn test_no_drop_after_unwrap() {
     let _guard = TEST_LOG_LOCK.lock();
 
     set_handler(test_logger);
-    LOG_HISTORY.lock().clear();
+    clear();
 
     {
         let w: Iart<i32> = Iart::Ok(5);
@@ -273,7 +350,11 @@ fn test_no_drop_after_unwrap() {
     }
 
     let history = LOG_HISTORY.lock();
-    assert!(!history.contains(&"dropped".to_string()));
+
+    #[cfg(not(feature = "no-alloc"))]
+    assert!(!history.contains(&"dropped"));
+    #[cfg(feature = "no-alloc")]
+    assert!(!history.contains(&Some("dropped")));
 }
 
 #[test]
@@ -287,19 +368,29 @@ fn test_drop_without_handling_if_panic_raised() {
 
     set_handler(test_logger);
     {
-        let mut history = LOG_HISTORY.lock();
-        history.clear();
+        clear();
     }
 
     let _ = std::panic::catch_unwind(|| {
-        let _w: Iart<i32> = Iart::Err(MyError {}, "panic test");
+        #[cfg(not(feature = "no-alloc"))]
+        let _w: Iart<i32> = Iart::Err(MyError, "panic test");
+        #[cfg(feature = "no-alloc")]
+        let _w: Iart<i32> = Iart::Err(&MyError, "panic test");
 
         panic!("intentional panic");
     });
 
     let history = LOG_HISTORY.lock();
+
+    #[cfg(not(feature = "no-alloc"))]
     assert!(
-        !history.contains(&"dropped".to_string()),
+        !history.contains(&"dropped"),
+        "Should not log 'dropped' event during panic unwinding to avoid double panic."
+    );
+
+    #[cfg(feature = "no-alloc")]
+    assert!(
+        !history.contains(&Some("dropped")),
         "Should not log 'dropped' event during panic unwinding to avoid double panic."
     );
 }
@@ -309,14 +400,20 @@ fn test_downcast_to_original_error() {
     let _guard = TEST_LOG_LOCK.lock();
 
     let w = {
-        let err = MyError {};
-        let w: Iart<i32> = Iart::Err(err, "TEST");
+        #[cfg(not(feature = "no-alloc"))]
+        let w: Iart<i32> = Iart::Err(crate::tests::MyError, "TEST");
+        #[cfg(feature = "no-alloc")]
+        let w: Iart<i32> = Iart::Err(&MyError, "TEST");
 
         w
     };
 
     let detail = unsafe { w.try_downcast::<MyError>().expect("failed to downcast.") };
-    assert_eq!(detail.1.desc.unwrap().as_ref(), "TEST")
+
+    #[cfg(not(feature = "no-alloc"))]
+    assert_eq!(detail.1.desc.unwrap().as_ref(), "TEST");
+    #[cfg(feature = "no-alloc")]
+    assert_eq!(detail.1.desc.unwrap(), "TEST");
 }
 
 #[test]
@@ -324,8 +421,10 @@ fn new_version_ok_and_err() {
     let _guard = TEST_LOG_LOCK.lock();
 
     let mut w = {
-        let err = MyError {};
-        let w: Iart<i32> = Iart::Err(err, "TEST");
+        #[cfg(not(feature = "no-alloc"))]
+        let w: Iart<i32> = Iart::Err(MyError, "TEST");
+        #[cfg(feature = "no-alloc")]
+        let w: Iart<i32> = Iart::Err(&MyError, "TEST");
 
         w
     };
@@ -355,11 +454,23 @@ fn new_version_ok_and_err() {
 fn cast_from() {
     let _guard = TEST_LOG_LOCK.lock();
 
+    #[cfg(not(feature = "no-alloc"))]
     fn f() -> Result<u32, MyError> {
-        Err(MyError {})
+        Err(MyError)
     }
 
+    #[cfg(not(feature = "no-alloc"))]
     fn f2() -> Result<u32, MyError> {
+        Ok(56)
+    }
+
+    #[cfg(feature = "no-alloc")]
+    fn f() -> Result<u32, &'static MyError> {
+        Err(&MyError)
+    }
+
+    #[cfg(feature = "no-alloc")]
+    fn f2() -> Result<u32, &'static MyError> {
         Ok(56)
     }
 
@@ -376,8 +487,13 @@ fn cast_from() {
 fn test_error_item() {
     let _guard = TEST_LOG_LOCK.lock();
 
+    #[cfg(not(feature = "no-alloc"))]
     fn test() -> Iart<u32> {
-        Iart::Err_item(MyError {}, "error", 5)
+        Iart::Err_item(MyError, "error", 5)
+    }
+    #[cfg(feature = "no-alloc")]
+    fn test() -> Iart<u32> {
+        Iart::Err_item(&MyError, "error", 5)
     }
 
     let res = test();
@@ -392,10 +508,10 @@ fn test_map_and_handled_trace() {
     let res = Iart::<u32>::Ok(100);
     assert!(!res.handled);
 
-    let res2 = res.map(|x| x.to_string());
+    let res2 = res.map(|x| x);
 
     assert!(!res2.handled);
-    assert_eq!(res2.unwrap(), "100");
+    assert_eq!(res2.unwrap(), 100);
 }
 
 #[cfg(feature = "error-can-have-item")]
@@ -403,7 +519,10 @@ fn test_map_and_handled_trace() {
 fn test_map_err_item_transform() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let res = Iart::<u32>::Err_item(MyError {}, "msg", 10);
+    #[cfg(not(feature = "no-alloc"))]
+    let res = Iart::<u32>::Err_item(MyError, "msg", 10);
+    #[cfg(feature = "no-alloc")]
+    let res = Iart::<u32>::Err_item(&MyError, "msg", 10);
 
     let res2 = res.map_err_item(|x| x, |item| item * 2);
 
@@ -417,11 +536,15 @@ fn test_map_err_item_transform() {
 fn to_result() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let res = Iart::<u32>::Err(MyError {}, "msg");
+    #[cfg(not(feature = "no-alloc"))]
+    let res = Iart::<u32>::Err(MyError, "msg");
+    #[cfg(feature = "no-alloc")]
+    let res = Iart::<u32>::Err(&MyError, "msg");
+
     let res2 = Iart::<u32>::Ok(5);
     let _ = unsafe { res.to_result::<MyError>() }
         .unwrap()
         .0
         .unwrap_err();
-    let _ = unsafe { res2.to_result::<MyError>() }.unwrap().0.unwrap();
+    unsafe { res2.to_result::<MyError>() }.unwrap().0.unwrap();
 }
