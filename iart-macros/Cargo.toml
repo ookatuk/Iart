@@ -15,6 +15,7 @@ readme = "../README.md"
 [features]
 for-nightly-try-support = []
 for-nightly-allocator-api-support = []
+no-alloc = []
 
 [lib]
 proc-macro = true
