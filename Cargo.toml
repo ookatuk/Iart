@@ -19,6 +19,6 @@ categories = ["rust-patterns", "no-std", "development-tools::debugging"]
 
 [workspace.dependencies]
 spin = "^0.10"
-iart-core = { path = "iart-core", version = "1.0.1" }
-iart-macros = { path = "iart-macros", version = "1.0.1" }
+iart-core = { path = "iart-core", version = "1.0.1", default-features = false }
+iart-macros = { path = "iart-macros", version = "1.0.1", default-features = false }
 
