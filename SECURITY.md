@@ -2,8 +2,7 @@
 
 ## Supported Versions
 
-* 1.1.x: Supported
-* 1.0.x: Supported
+* 2.0.x: Supported
 * Others: Not supported
 
 ## Vulnerability Reporting
