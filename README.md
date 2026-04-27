@@ -302,9 +302,8 @@ A:
 `for-nightly-allocator-api-support` - (nightly) Enables `allocator-api` support. Usage is the same as `core`, using
 `new_in`, etc.
 
-`no-alloc`
-> Supports static references instead of Box.
-> Incompatible with for-nightly-allocator-api-support.
+`alloc`
+> Supports Box instead of static references.
 
 # How to install?
 `cargo add iart`
