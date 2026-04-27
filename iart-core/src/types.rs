@@ -37,6 +37,19 @@ pub struct ToResultRet<T: 'static, Item = ()> {
     pub item: Option<Item>,
 }
 
+pub struct GetErrRet<Item> {
+    pub detail: ErrorDetail,
+    pub item: Option<Item>,
+}
+
+pub struct DownCasted<T: 'static> {
+    pub detail: ErrorDetail,
+    #[cfg(feature = "alloc")]
+    pub downcast: T,
+    #[cfg(not(feature = "alloc"))]
+    pub downcast: &'static T,
+}
+
 #[must_use]
 #[derive(Debug)]
 #[doc = include_str!("../doc/structs/ErrorDetail.md")]

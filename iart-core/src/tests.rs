@@ -310,9 +310,9 @@ fn test_error_preserved() {
     #[cfg(not(feature = "alloc"))]
     let w: Iart<i32> = Iart::new_err(&MyError, "msg");
 
-    let err = w.unwrap_err().0;
+    let err = w.unwrap_err();
 
-    assert_eq!(err.desc.unwrap(), "msg");
+    assert_eq!(err.detail.desc.unwrap(), "msg");
 }
 
 #[test]
@@ -399,9 +399,9 @@ fn test_downcast_to_original_error() {
     let detail = unsafe { w.try_downcast::<MyError>().expect("failed to downcast.") };
 
     #[cfg(feature = "alloc")]
-    assert_eq!(detail.1.desc.unwrap().as_ref(), "TEST");
+    assert_eq!(detail.detail.desc.unwrap().as_ref(), "TEST");
     #[cfg(not(feature = "alloc"))]
-    assert_eq!(detail.1.desc.unwrap(), "TEST");
+    assert_eq!(detail.detail.desc.unwrap(), "TEST");
 }
 
 #[test]
@@ -476,16 +476,16 @@ fn test_error_item() {
 
     #[cfg(feature = "alloc")]
     fn test() -> Iart<u32> {
-        Iart::new_err(MyError, "error").with_item(5).0
+        Iart::new_err(MyError, "error").with_item(5)
     }
     #[cfg(not(feature = "alloc"))]
     fn test() -> Iart<u32> {
-        Iart::new_err(&MyError, "error").with_item(5).0
+        Iart::new_err(&MyError, "error").with_item(5)
     }
 
     let res = test();
     let ret = res.unwrap_err();
-    assert_eq!(ret.1, Some(5));
+    assert_eq!(ret.item, Some(5));
 }
 
 #[test]

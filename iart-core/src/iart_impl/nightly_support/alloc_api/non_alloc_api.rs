@@ -1,6 +1,5 @@
 #![doc = include_str!("../../../../doc/modules/non_alloc_api.md")]
 
-use crate::HANDLER;
 use crate::Trans;
 use crate::events::AutoRequestType;
 use crate::events::IartEvent;
@@ -9,6 +8,7 @@ use crate::types::IartLogger;
 use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails};
 use crate::utils::cold_path;
 use crate::utils::unlikely;
+use crate::{GetErrRet, HANDLER};
 #[cfg(feature = "alloc")]
 use alloc::borrow::Cow;
 #[cfg(feature = "alloc")]
@@ -319,7 +319,7 @@ impl<Item> Iart<Item> {
     #[must_use]
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/err.md")]
-    pub fn err(mut self) -> Result<(ErrorDetail, Option<Item>), Self> {
+    pub fn err(mut self) -> Result<GetErrRet<Item>, Self> {
         self.handled = true;
 
         self.send_log();
@@ -338,7 +338,7 @@ impl<Item> Iart<Item> {
                     self.item = item;
                     Err(self)
                 }
-                Err(err) => Ok((err, item)),
+                Err(err) => Ok(GetErrRet { item, detail: err }),
             }
         } else {
             cold_path();
@@ -377,7 +377,7 @@ impl<Item> Iart<Item> {
     #[track_caller]
     #[must_use]
     #[doc = include_str!("../../../../doc/fn/Iart/unwrap_err.md")]
-    pub fn unwrap_err(mut self) -> (ErrorDetail, Option<Item>) {
+    pub fn unwrap_err(mut self) -> GetErrRet<Item> {
         self.handled = true;
 
         self.send_log();
@@ -388,11 +388,10 @@ impl<Item> Iart<Item> {
         };
 
         match self.data.take() {
-            Some(Err(e)) => {
-                let item = self.item.take();
-
-                (e, item)
-            }
+            Some(Err(e)) => GetErrRet {
+                detail: e,
+                item: self.item.take(),
+            },
             Some(Ok(_)) => panic!("called `Iart::unwrap_err()` on an `Ok` value"),
             None => panic!("Iart: unwrap_err called after consumption"),
         }

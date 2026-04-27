@@ -1,9 +1,9 @@
 #![doc = include_str!("../../../../doc/modules/alloc_api.md")]
 
-use crate::Trans;
 use crate::events::{AutoRequestType, IartEvent};
 use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails, IartLogger};
 use crate::utils::{cold_path, unlikely};
+use crate::{GetErrRet, Trans};
 use crate::{HANDLER, is_initialized_handler};
 use alloc::alloc::Allocator;
 use alloc::borrow::Cow;
@@ -306,7 +306,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[must_use]
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/err.md")]
-    pub fn err(mut self) -> Result<(ErrorDetail<A>, Option<Item>), Self> {
+    pub fn err(mut self) -> Result<GetErrRet<Item>, Self> {
         self.handled = true;
 
         self.send_log();
@@ -323,7 +323,10 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                     self.data = Some(data);
                     Err(self)
                 }
-                Err(err) => Ok((err, self.item.take())),
+                Err(err) => Ok(GetErrRet {
+                    item: self.item.take(),
+                    detail: err,
+                }),
             }
         } else {
             cold_path();
@@ -366,10 +369,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[must_use]
     #[doc = include_str!("../../../../doc/fn/Iart/unwrap_err.md")]
-    pub fn unwrap_err(mut self) -> (ErrorDetail<A>, Option<Item>)
-    where
-        Item: Debug,
-    {
+    pub fn unwrap_err(mut self) -> GetErrRet {
         self.send_log();
         self.handled = true;
 
@@ -379,9 +379,12 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         };
 
         match self.data.take() {
-            Some(Err(e)) => (e, self.item.take()),
-            Some(Ok(t)) => {
-                panic!("called `Iart::unwrap_err()` on an `Ok` value: {:?}", t);
+            Some(Err(e)) => GetErrRet {
+                detail: e,
+                item: self.item.take(),
+            },
+            Some(Ok(_)) => {
+                panic!("called `Iart::unwrap_err()` on an `Ok` value");
             }
             None => {
                 panic!("Iart: unwrap_err called after consumption");

@@ -2,7 +2,7 @@ use crate::events::AutoRequestType::{ToResult, TryDownCastFail, TryDownCastUsed,
 use crate::events::IartEvent;
 use crate::types::{DummyErr, ErrorDetail, Iart};
 use crate::utils::{cold_path, unlikely};
-use crate::{ToResultRet, Trans};
+use crate::{DownCasted, ToResultRet, Trans};
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
 #[cfg(feature = "alloc")]
@@ -144,7 +144,7 @@ impl<Item> Iart<Item> {
     #[track_caller]
     #[doc = include_str!("../../doc/fn/Iart/try_downcast.md")]
     #[cfg(feature = "alloc")]
-    pub unsafe fn try_downcast<T: 'static>(mut self) -> Result<(T, ErrorDetail), Self>
+    pub unsafe fn try_downcast<T: 'static>(mut self) -> Result<DownCasted<T>, Self>
     where
         Item: Debug,
     {
@@ -182,7 +182,10 @@ impl<Item> Iart<Item> {
 
                 let value: T = *item;
 
-                Ok((value, detail))
+                Ok(DownCasted {
+                    downcast: value,
+                    detail,
+                })
             }
         }
     }
@@ -190,7 +193,7 @@ impl<Item> Iart<Item> {
     #[track_caller]
     #[doc = include_str!("../../doc/fn/Iart/try_downcast.md")]
     #[cfg(not(feature = "alloc"))]
-    pub unsafe fn try_downcast<T: 'static>(mut self) -> Result<(&'static T, ErrorDetail), Self>
+    pub unsafe fn try_downcast<T: 'static>(mut self) -> Result<DownCasted<T>, Self>
     where
         Item: Debug,
     {
@@ -226,17 +229,20 @@ impl<Item> Iart<Item> {
             Some(item) => {
                 self.handled = true;
 
-                Ok((item, detail))
+                DownCasted {
+                    detail,
+                    downcast: item,
+                }
             }
         }
     }
 
     #[inline]
-    pub fn with_item(mut self, item: Item) -> (Self, Option<Item>) {
-        let old = self.item.take();
+    pub fn with_item(mut self, item: Item) -> Self {
+        // TODO: doc
         self.item = Some(item);
 
-        (self, old)
+        self
     }
 
     #[doc(hidden)]
