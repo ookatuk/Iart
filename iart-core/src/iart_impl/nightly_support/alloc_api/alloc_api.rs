@@ -1,5 +1,6 @@
 #![doc = include_str!("../../../../doc/modules/alloc_api.md")]
 
+use crate::Trans;
 use crate::events::{AutoRequestType, IartEvent};
 use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails, IartLogger};
 use crate::utils::{cold_path, unlikely};
@@ -62,14 +63,7 @@ impl<A: alloc::alloc::Allocator + Clone> ErrorDetail<A> {
     pub unsafe fn new(
         ty: Box<dyn IartErr<A> + Send + Sync, A>,
         desc: Option<Cow<'static, str>>,
-        to_any: (
-            unsafe fn(
-                Box<dyn IartErr<A> + Send + Sync, A>,
-            ) -> Box<dyn core::any::Any + Send + Sync, A>,
-            unsafe fn(
-                Box<dyn core::any::Any + Send + Sync, A>,
-            ) -> Box<dyn IartErr<A> + Send + Sync, A>,
-        ),
+        to_any: Trans<A>,
     ) -> Self {
         Self {
             ty: Some(ty),
@@ -92,7 +86,7 @@ impl<A: alloc::alloc::Allocator + Clone + 'static> Clone for ErrorDetail<A> {
                 }
             },
             desc: self.desc.clone(),
-            trans_fns: self.trans_fns,
+            trans_fns: self.trans_fns.clone(),
         }
     }
 }
@@ -144,11 +138,11 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[inline]
     #[allow(non_snake_case)]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Ok.md")]
-    pub fn Ok(item: Item) -> Iart<Item, A>
+    pub fn new_ok(item: Item) -> Iart<Item, A>
     where
         A: Default,
     {
-        Iart::<Item, A>::Ok_in(item, A::default())
+        Iart::<Item, A>::new_ok_in(item, A::default())
     }
 
     #[inline]
@@ -156,53 +150,42 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Err.md")]
-    pub fn Err<ERR: IartErr<A> + Send + Sync + 'static>(
+    pub fn new_err<ERR: IartErr<A> + Send + Sync + 'static>(
         error: ERR,
         desc: impl Into<Option<&'static str>>,
     ) -> Iart<Item, A>
     where
         A: Default,
     {
-        Iart::<Item, A>::Err_in(error, desc, A::default())
+        Iart::<Item, A>::new_err_in(error, desc, A::default())
     }
 
     #[allow(non_snake_case)]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Ok_in.md")]
-    pub fn Ok_in(item: Item, allocator: A) -> Iart<Item, A> {
-        #[cfg(not(feature = "allow-backtrace-logging"))]
-        let res = Self {
-            data: Some(Ok(item)),
+    #[inline]
+    pub fn new_ok_in(item: Item, allocator: A) -> Iart<Item, A> {
+        Iart::<Item, A> {
+            data: Some(Ok(())),
             handled: false,
-            allocator: allocator,
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
+            allocator: allocator.clone(),
+            #[cfg(feature = "allow-backtrace-logging")]
+            log: {
+                #[allow(unused_mut)]
+                let mut log = VecDeque::<&'static Location<'static>, A>::new_in(allocator);
+                #[cfg(feature = "allow-backtrace-logging-with-ok")]
+                log.push_back(Location::caller());
+                Some(log)
+            },
             trans_fns: None,
-        };
-        #[cfg(feature = "allow-backtrace-logging")]
-        let res = {
-            #[allow(unused_mut)]
-            let mut log = VecDeque::<&'static Location<'static>, A>::new_in(allocator.clone());
-            #[cfg(feature = "allow-backtrace-logging-with-ok")]
-            log.push_back(Location::caller());
-
-            Iart::<Item, A> {
-                data: Some(Ok(item)),
-                handled: false,
-                allocator,
-                log: Some(log),
-                #[cfg(feature = "error-can-have-item")]
-                err_item: None,
-                trans_fns: None,
-            }
-        };
-        res
+            item: Some(item),
+        }
     }
 
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Err_in.md")]
-    pub fn Err_in<ERR: IartErr<A> + Send + Sync + 'static>(
+    pub fn new_err_in<ERR: IartErr<A> + Send + Sync + 'static>(
         error: ERR,
         desc: impl Into<Option<&'static str>>,
         allocator: A,
@@ -210,20 +193,15 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         let to_any = jen_fns!(ERR, A);
 
         Iart::<Item, A> {
-            data: Some(Err(Box::new_in(
-                unsafe {
-                    ErrorDetail::<A>::new(
-                        Box::new_in(error, allocator.clone()),
-                        desc.into().map(|x| Cow::Borrowed(x)),
-                        to_any,
-                    )
-                },
-                allocator.clone(),
-            ))),
+            data: Some(Err(unsafe {
+                ErrorDetail::<A>::new(
+                    Box::new_in(error, allocator.clone()),
+                    desc.into().map(|x| Cow::Borrowed(x)),
+                    to_any.clone(),
+                )
+            })),
             handled: false,
             allocator: allocator.clone(),
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
             #[cfg(feature = "allow-backtrace-logging")]
             log: {
                 let mut log = VecDeque::new_in(allocator.clone());
@@ -231,6 +209,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                 Some(log)
             },
             trans_fns: Some(to_any),
+            item: None,
         }
     }
 
@@ -238,7 +217,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Err_string_in.md")]
-    pub fn Err_string_in<ERR>(
+    pub fn new_string_err_in<ERR>(
         error: ERR,
         desc: impl Into<Option<String>>,
         allocator: A,
@@ -250,20 +229,15 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             let to_any = jen_fns!(ERR, A);
 
             Self {
-                data: Some(Err(Box::new_in(
-                    unsafe {
-                        ErrorDetail::new(
-                            Box::new_in(error, allocator.clone()),
-                            desc.into().map(|x| Cow::Owned(x)),
-                            to_any,
-                        )
-                    },
-                    allocator.clone(),
-                ))),
+                data: Some(Err(unsafe {
+                    ErrorDetail::new(
+                        Box::new_in(error, allocator.clone()),
+                        desc.into().map(|x| Cow::Owned(x)),
+                        to_any.clone(),
+                    )
+                })),
                 handled: false,
                 allocator: allocator.clone(),
-                #[cfg(feature = "error-can-have-item")]
-                err_item: None,
                 #[cfg(feature = "allow-backtrace-logging")]
                 log: {
                     let mut log = VecDeque::new_in(allocator);
@@ -271,6 +245,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                     Some(log)
                 },
                 trans_fns: Some(to_any),
+                item: None,
             }
         };
 
@@ -282,14 +257,14 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Err_string.md")]
-    pub fn Err_string<ERR: IartErr<A> + Send + Sync + 'static>(
+    pub fn new_string_err<ERR: IartErr<A> + Send + Sync + 'static>(
         error: ERR,
         desc: impl Into<Option<String>>,
     ) -> Iart<Item, A>
     where
         A: Default,
     {
-        Iart::<Item, A>::Err_string_in(error, desc, A::default())
+        Iart::<Item, A>::new_string_err_in(error, desc, A::default())
     }
 
     #[inline]
@@ -314,7 +289,10 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         let data = self.data.take().unwrap();
 
         match data {
-            Ok(item) => Ok(item),
+            Ok(_) => {
+                self.data = Some(Ok(()));
+                Ok(self.item.take().unwrap())
+            }
             Err(err) => {
                 cold_path();
                 self.handled = false;
@@ -328,7 +306,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[must_use]
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/err.md")]
-    pub fn err(mut self) -> Result<(Box<ErrorDetail<A>, A>, Option<Item>), Self> {
+    pub fn err(mut self) -> Result<(ErrorDetail<A>, Option<Item>), Self> {
         self.handled = true;
 
         self.send_log();
@@ -339,18 +317,13 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         };
 
         if let Some(data) = self.data.take() {
-            #[cfg(feature = "error-can-have-item")]
-            let item = self.err_item.take();
-            #[cfg(not(feature = "error-can-have-item"))]
-            let item = None;
-
             match data {
                 Ok(_) => {
                     self.handled = false;
                     self.data = Some(data);
                     Err(self)
                 }
-                Err(err) => Ok((err, item)),
+                Err(err) => Ok((err, self.item.take())),
             }
         } else {
             cold_path();
@@ -378,7 +351,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         let data_opt = self.data.take();
 
         match data_opt {
-            Some(Ok(item)) => item,
+            Some(Ok(_)) => self.item.take().unwrap(),
             Some(Err(_)) => {
                 self.data = data_opt;
                 self.expect("failed to unwrap Iart")
@@ -393,7 +366,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[must_use]
     #[doc = include_str!("../../../../doc/fn/Iart/unwrap_err.md")]
-    pub fn unwrap_err(mut self) -> (Box<ErrorDetail<A>, A>, Option<Item>)
+    pub fn unwrap_err(mut self) -> (ErrorDetail<A>, Option<Item>)
     where
         Item: Debug,
     {
@@ -406,15 +379,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         };
 
         match self.data.take() {
-            Some(Err(e)) => {
-                #[cfg(not(feature = "error-can-have-item"))]
-                let item = None;
-
-                #[cfg(feature = "error-can-have-item")]
-                let item = self.err_item.take();
-
-                (e, item)
-            }
+            Some(Err(e)) => (e, self.item.take()),
             Some(Ok(t)) => {
                 panic!("called `Iart::unwrap_err()` on an `Ok` value: {:?}", t);
             }
@@ -438,8 +403,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                 .unwrap_unchecked()
         };
 
-        let data = self.data.take();
-        unsafe { data.unwrap_unchecked().unwrap_unchecked() }
+        unsafe { self.item.take().unwrap_unchecked() }
     }
 
     #[track_caller]
@@ -458,7 +422,10 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         };
 
         match self.data.take() {
-            Some(Ok(t)) => t,
+            Some(Ok(_)) => self
+                .item
+                .take()
+                .expect("called `Iart::expect()`, but raised error"),
             Some(Err(e)) => {
                 panic!("{}: {:?}", msg, e);
             }
@@ -478,10 +445,10 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         allocator: A,
     ) -> Iart<Item, A> {
         if let Some(item) = data {
-            Iart::<Item, A>::Ok_in(item, allocator)
+            Iart::<Item, A>::new_ok_in(item, allocator)
         } else {
             cold_path();
-            Iart::<Item, A>::Err_in(e_type, detail, allocator)
+            Iart::<Item, A>::new_err_in(e_type, detail, allocator)
         }
     }
 
@@ -557,56 +524,31 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     }
 
     #[track_caller]
-    #[cfg(feature = "error-can-have-item")]
-    #[doc = include_str!("../../../../doc/fn/Iart/map_err_item.md")]
-    pub fn map_err_item<F, F2, NewItem>(mut self, fns: F, item_fns: F2) -> Iart<NewItem, A>
+    #[doc = include_str!("../../../../doc/fn/Iart/map.md")]
+    pub fn internal_map<F, NewItem: 'static>(mut self, fns: F) -> Iart<NewItem, A>
     where
         F: FnOnce(Item) -> NewItem,
-        F2: FnOnce(Item) -> NewItem,
         A: Default + Send + Sync + 'static,
     {
-        self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Map))
-            .unwrap();
-
-        if let Some(data) = self.data.take() {
-            let mut res: Iart<NewItem, A> = Self::from_internal_data(data.map(fns));
-
+        let res = Iart::<NewItem, A> {
+            handled: false,
+            data: self.data.take(),
+            item: self.item.take().map(fns),
             #[cfg(feature = "allow-backtrace-logging")]
-            {
-                res.log = self.log.take();
-            }
+            log: self.log.take(),
+            trans_fns: self.trans_fns.take(),
+            allocator: self.allocator.clone(),
+        };
 
-            let item = self.err_item.take();
-            let item = item.map(item_fns);
-            res.err_item = item;
+        self.handled = true;
 
-            res.handled = false;
-            self.handled = true;
-
-            res
-        } else {
-            cold_path();
-
-            let res = Iart::<NewItem, A> {
-                handled: false,
-                data: None,
-                #[cfg(feature = "error-can-have-item")]
-                err_item: self.err_item.take().map(item_fns),
-                #[cfg(feature = "allow-backtrace-logging")]
-                log: self.log.take(),
-                trans_fns: None,
-                allocator: self.allocator.clone(),
-            };
-
-            self.handled = true;
-
-            res
-        }
+        res
     }
 
     #[track_caller]
+    #[inline]
     #[doc = include_str!("../../../../doc/fn/Iart/map.md")]
-    pub fn map<F, NewItem: 'static>(mut self, fns: F) -> Iart<NewItem, A>
+    pub fn map<F, NewItem: 'static>(self, fns: F) -> Iart<NewItem, A>
     where
         F: FnOnce(Item) -> NewItem,
         A: Default + Send + Sync + 'static,
@@ -614,52 +556,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Map))
             .unwrap();
 
-        if let Some(data) = self.data.take() {
-            let mut res: Iart<NewItem, A> = Self::from_internal_data(data.map(fns));
-
-            #[cfg(feature = "allow-backtrace-logging")]
-            {
-                res.log = self.log.take();
-            }
-
-            res.handled = false;
-            self.handled = true;
-
-            res
-        } else {
-            cold_path();
-
-            let res = Iart::<NewItem, A> {
-                handled: false,
-                data: None,
-                #[cfg(feature = "error-can-have-item")]
-                err_item: None,
-                #[cfg(feature = "allow-backtrace-logging")]
-                log: self.log.take(),
-                trans_fns: None,
-                allocator: self.allocator.clone(),
-            };
-
-            self.handled = true;
-
-            res
-        }
-    }
-
-    fn from_internal_data<Data>(data: Result<Data, Box<ErrorDetail<A>, A>>) -> Iart<Data, A>
-    where
-        A: Default,
-    {
-        match data {
-            Ok(val) => Iart::Ok_in(val, A::default()),
-            Err(err) => {
-                let mut iart = Iart::Err_in(DummyErr {}, None, A::default());
-                iart.trans_fns = Some(err.trans_fns);
-                iart.data = Some(Err(err));
-
-                iart
-            }
-        }
+        self.internal_map(fns)
     }
 }
 
@@ -678,63 +575,22 @@ where
     }
 }
 
-impl<Item: Clone, A: alloc::alloc::Allocator + Clone + 'static> Clone for Iart<Item, A> {
-    fn clone(&self) -> Self {
-        let alloc = self.allocator.clone();
-
-        let new_data = self.data.as_ref().map(|d| match d {
-            Ok(item) => Ok(item.clone()),
-            Err(err_detail_box) => Err(Box::new_in((**err_detail_box).clone(), alloc.clone())),
-        });
-        Self {
-            handled: self.handled,
-            data: new_data,
-            #[cfg(feature = "allow-backtrace-logging")]
-            log: self.log.clone(),
-            allocator: self.allocator.clone(),
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
-            trans_fns: self.trans_fns,
-        }
-    }
-}
-
 impl<T, A: alloc::alloc::Allocator + Clone + 'static + Default> Default for Iart<T, A> {
     fn default() -> Self {
         let alloc = A::default();
-
-        #[cfg(feature = "allow-backtrace-logging")]
-        let res = {
-            let mut log = VecDeque::new_in(alloc.clone());
-            log.push_back(Location::caller());
-
-            Iart::<T, A> {
-                data: Some(Err(Box::new_in(
-                    ErrorDetail::default_in(alloc.clone()),
-                    alloc.clone(),
-                ))),
-                handled: false,
-                log: Some(log),
-                allocator: alloc,
-                #[cfg(feature = "error-can-have-item")]
-                err_item: None,
-                trans_fns: Some(jen_fns!(DummyErr, A)),
-            }
-        };
-        #[cfg(not(feature = "allow-backtrace-logging"))]
-        let res = Iart::<T, A> {
-            data: Some(Err(Box::new_in(
-                ErrorDetail::default_in(alloc.clone()),
-                alloc.clone(),
-            ))),
+        Iart::<T, A> {
+            data: Some(Err(ErrorDetail::default_in(alloc.clone()))),
             handled: false,
+            #[cfg(feature = "allow-backtrace-logging")]
+            log: {
+                let mut log = VecDeque::new_in(alloc.clone());
+                log.push_back(Location::caller());
+                Some(log)
+            },
             allocator: alloc,
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
+            item: None,
             trans_fns: Some(jen_fns!(DummyErr, A)),
-        };
-
-        res
+        }
     }
 }
 
@@ -744,8 +600,8 @@ impl<T, E: IartErr<A> + 'static + Send + Sync, A: Allocator + Clone + Default + 
     #[track_caller]
     fn from(res: Result<T, E>) -> Self {
         match res {
-            Ok(val) => Iart::<T, A>::Ok_in(val, A::default()),
-            Err(err) => Iart::<T, A>::Err_in(err, None, A::default()),
+            Ok(val) => Iart::<T, A>::new_ok_in(val, A::default()),
+            Err(err) => Iart::<T, A>::new_err_in(err, None, A::default()),
         }
     }
 }

@@ -1,6 +1,7 @@
 #![doc = include_str!("../../../../doc/modules/non_alloc_api.md")]
 
 use crate::HANDLER;
+use crate::Trans;
 use crate::events::AutoRequestType;
 use crate::events::IartEvent;
 use crate::is_initialized_handler;
@@ -159,9 +160,9 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[cfg(feature = "alloc")]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Ok.md")]
-    pub fn Ok(item: Item) -> Self {
+    pub fn new_ok(item: Item) -> Self {
         Self {
-            data: Some(Ok(item)),
+            data: Some(Ok(())),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
             log: {
@@ -171,9 +172,8 @@ impl<Item> Iart<Item> {
                 log.push_back(Location::caller());
                 Some(log)
             },
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
             trans_fns: None,
+            item: Some(item),
         }
     }
 
@@ -181,9 +181,9 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Ok.md")]
-    pub fn Ok(item: Item) -> Self {
+    pub fn new_ok(item: Item) -> Self {
         Self {
-            data: Some(Ok(item)),
+            data: Some(Ok(())),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
             log: {
@@ -195,9 +195,8 @@ impl<Item> Iart<Item> {
                 }
                 Some(log)
             },
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
             trans_fns: None,
+            item: Some(item),
         }
     }
 
@@ -207,12 +206,14 @@ impl<Item> Iart<Item> {
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err.md")]
     #[cfg(feature = "alloc")]
-    pub fn Err<ERR: IartErr + 'static>(error: ERR, desc: impl Into<Option<&'static str>>) -> Self {
+    pub fn new_err<ERR: IartErr + 'static>(
+        error: ERR,
+        desc: impl Into<Option<&'static str>>,
+    ) -> Self {
         let to_any = jen_fns!(ERR);
 
-        let detail = Box::new(unsafe {
-            ErrorDetail::new(Box::new(error), desc.into().map(Cow::Borrowed), to_any)
-        });
+        let detail =
+            unsafe { ErrorDetail::new(Box::new(error), desc.into().map(Cow::Borrowed), to_any) };
 
         Self {
             data: Some(Err(detail)),
@@ -223,8 +224,7 @@ impl<Item> Iart<Item> {
                 log.push_back(Location::caller());
                 Some(log)
             },
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
+            item: None,
             trans_fns: Some(to_any),
         }
     }
@@ -235,7 +235,7 @@ impl<Item> Iart<Item> {
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err.md")]
     #[cfg(not(feature = "alloc"))]
-    pub fn Err<ERR: IartErr + 'static>(
+    pub fn new_err<ERR: IartErr + 'static>(
         error: &'static ERR,
         desc: impl Into<Option<&'static str>>,
     ) -> Self {
@@ -252,8 +252,7 @@ impl<Item> Iart<Item> {
                 log[0] = Some(Location::caller());
                 Some(log)
             },
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
+            item: None,
             trans_fns: Some(to_any),
         }
     }
@@ -264,11 +263,13 @@ impl<Item> Iart<Item> {
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err_string.md")]
     #[cfg(feature = "alloc")]
-    pub fn Err_string<ERR: IartErr + 'static>(error: ERR, desc: impl Into<Option<String>>) -> Self {
+    pub fn new_string_err<ERR: IartErr + 'static>(
+        error: ERR,
+        desc: impl Into<Option<String>>,
+    ) -> Self {
         let to_any = jen_fns!(ERR);
-        let detail = Box::new(unsafe {
-            ErrorDetail::new(Box::new(error), desc.into().map(Cow::Owned), to_any)
-        });
+        let detail =
+            unsafe { ErrorDetail::new(Box::new(error), desc.into().map(Cow::Owned), to_any) };
 
         Self {
             data: Some(Err(detail)),
@@ -279,8 +280,7 @@ impl<Item> Iart<Item> {
                 log.push_back(Location::caller());
                 Some(log)
             },
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
+            item: None,
             trans_fns: Some(to_any),
         }
     }
@@ -305,7 +305,7 @@ impl<Item> Iart<Item> {
         }
         let data = self.data.take().unwrap();
         match data {
-            Ok(item) => Ok(item),
+            Ok(_) => Ok(self.item.take().unwrap()),
             Err(err) => {
                 cold_path();
                 self.handled = false;
@@ -319,44 +319,6 @@ impl<Item> Iart<Item> {
     #[must_use]
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/err.md")]
-    #[cfg(feature = "alloc")]
-    pub fn err(mut self) -> Result<(Box<ErrorDetail>, Option<Item>), Self> {
-        self.handled = true;
-
-        self.send_log();
-
-        unsafe {
-            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::GetErr))
-                .unwrap_unchecked()
-        };
-
-        if let Some(data) = self.data.take() {
-            #[cfg(feature = "error-can-have-item")]
-            let item = self.err_item.take();
-            #[cfg(not(feature = "error-can-have-item"))]
-            let item = None;
-
-            match data {
-                Ok(_) => {
-                    self.handled = false;
-                    self.data = Some(data);
-                    Err(self)
-                }
-                Err(err) => Ok((err, item)),
-            }
-        } else {
-            cold_path();
-            debug_assert!(false, "Iart: err called after consumption");
-            self.handled = false;
-            Err(self)
-        }
-    }
-
-    #[inline]
-    #[must_use]
-    #[track_caller]
-    #[doc = include_str!("../../../../doc/fn/Iart/err.md")]
-    #[cfg(not(feature = "alloc"))]
     pub fn err(mut self) -> Result<(ErrorDetail, Option<Item>), Self> {
         self.handled = true;
 
@@ -368,15 +330,12 @@ impl<Item> Iart<Item> {
         };
 
         if let Some(data) = self.data.take() {
-            #[cfg(feature = "error-can-have-item")]
-            let item = self.err_item.take();
-            #[cfg(not(feature = "error-can-have-item"))]
-            let item = None;
+            let item = self.item.take();
 
             match data {
                 Ok(_) => {
                     self.handled = false;
-                    self.data = Some(data);
+                    self.item = item;
                     Err(self)
                 }
                 Err(err) => Ok((err, item)),
@@ -403,12 +362,39 @@ impl<Item> Iart<Item> {
         };
 
         match self.data.take() {
-            Some(Ok(item)) => item,
+            Some(Ok(_)) => {
+                self.data = Some(Ok(()));
+                self.item.take().unwrap()
+            }
             Some(Err(e)) => {
                 self.data = Some(Err(e));
                 self.expect("failed to unwrap Iart")
             }
             None => panic!("Iart: unwrap called after consumption"),
+        }
+    }
+
+    #[track_caller]
+    #[must_use]
+    #[doc = include_str!("../../../../doc/fn/Iart/unwrap_err.md")]
+    pub fn unwrap_err(mut self) -> (ErrorDetail, Option<Item>) {
+        self.handled = true;
+
+        self.send_log();
+
+        let _ = unsafe {
+            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::UnwrapErr))
+                .unwrap_unchecked()
+        };
+
+        match self.data.take() {
+            Some(Err(e)) => {
+                let item = self.item.take();
+
+                (e, item)
+            }
+            Some(Ok(_)) => panic!("called `Iart::unwrap_err()` on an `Ok` value"),
+            None => panic!("Iart: unwrap_err called after consumption"),
         }
     }
 
@@ -426,71 +412,14 @@ impl<Item> Iart<Item> {
         };
 
         match self.data.take() {
-            Some(Ok(t)) => t,
+            Some(Ok(_)) => {
+                self.data = Some(Ok(()));
+                self.item
+                    .take()
+                    .expect("expect called `Iart::expect()`, but raised error.")
+            }
             Some(Err(e)) => panic!("{}: {:?}", msg, e),
             None => panic!("{}: (already consumed)", msg),
-        }
-    }
-
-    #[track_caller]
-    #[must_use]
-    #[cfg(feature = "alloc")]
-    #[doc = include_str!("../../../../doc/fn/Iart/unwrap_err.md")]
-    pub fn unwrap_err(mut self) -> (Box<ErrorDetail>, Option<Item>)
-    where
-        Item: Debug,
-    {
-        self.handled = true;
-
-        self.send_log();
-
-        let _ = unsafe {
-            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::UnwrapErr))
-                .unwrap_unchecked()
-        };
-
-        match self.data.take() {
-            Some(Err(e)) => {
-                #[cfg(feature = "error-can-have-item")]
-                let item = self.err_item.take();
-                #[cfg(not(feature = "error-can-have-item"))]
-                let item = None;
-
-                (e, item)
-            }
-            Some(Ok(t)) => panic!("called `Iart::unwrap_err()` on an `Ok` value: {:?}", t),
-            None => panic!("Iart: unwrap_err called after consumption"),
-        }
-    }
-
-    #[track_caller]
-    #[must_use]
-    #[cfg(not(feature = "alloc"))]
-    #[doc = include_str!("../../../../doc/fn/Iart/unwrap_err.md")]
-    pub fn unwrap_err(mut self) -> (ErrorDetail, Option<Item>)
-    where
-        Item: Debug,
-    {
-        self.handled = true;
-
-        self.send_log();
-
-        let _ = unsafe {
-            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::UnwrapErr))
-                .unwrap_unchecked()
-        };
-
-        match self.data.take() {
-            Some(Err(e)) => {
-                #[cfg(feature = "error-can-have-item")]
-                let item = self.err_item.take();
-                #[cfg(not(feature = "error-can-have-item"))]
-                let item = None;
-
-                (e, item)
-            }
-            Some(Ok(t)) => panic!("called `Iart::unwrap_err()` on an `Ok` value: {:?}", t),
-            None => panic!("Iart: unwrap_err called after consumption"),
         }
     }
 
@@ -503,12 +432,10 @@ impl<Item> Iart<Item> {
 
         self.send_log();
 
-        let _ = unsafe {
-            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Unwrap))
-                .unwrap_unchecked()
-        };
+        self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Unwrap))
+            .unwrap();
 
-        unsafe { self.data.take().unwrap_unchecked().unwrap_unchecked() }
+        unsafe { self.item.take().unwrap_unchecked() }
     }
 
     #[track_caller]
@@ -621,10 +548,10 @@ impl<Item> Iart<Item> {
         detail: impl Into<Option<&'static str>>,
     ) -> Self {
         if let Some(item) = data {
-            Self::Ok(item)
+            Self::new_ok(item)
         } else {
             cold_path();
-            Self::Err(e_type, detail)
+            Self::new_err(e_type, detail)
         }
     }
 
@@ -638,10 +565,10 @@ impl<Item> Iart<Item> {
         detail: impl Into<Option<&'static str>>,
     ) -> Self {
         if let Some(item) = data {
-            Self::Ok(item)
+            Self::new_ok(item)
         } else {
             cold_path();
-            Self::Err(e_type, detail)
+            Self::new_err(e_type, detail)
         }
     }
 
@@ -659,90 +586,38 @@ impl<Item> Iart<Item> {
     }
 
     #[track_caller]
-    #[cfg(feature = "error-can-have-item")]
-    #[doc = include_str!("../../../../doc/fn/Iart/map_err_item.md")]
-    pub fn map_err_item<F, G, NewItem>(mut self, fns: F, item_fns: G) -> Iart<NewItem>
+    #[allow(rustdoc::broken_intra_doc_links)] // Because it should be correct but produces an error.
+    #[doc = include_str!("../../../../doc/fn/Iart/map.md")]
+    #[inline]
+    pub fn map<F, NewItem>(self, fns: F) -> Iart<NewItem>
     where
         F: FnOnce(Item) -> NewItem,
-        G: FnOnce(Item) -> NewItem,
     {
         self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Map))
             .unwrap();
-
-        if let Some(data) = self.data.take() {
-            let mut res: Iart<NewItem> = data.map(fns).into();
-
-            #[cfg(feature = "allow-backtrace-logging")]
-            {
-                res.log = self.log.take();
-            }
-
-            let item = self.err_item.take();
-            let item = item.map(item_fns);
-            res.err_item = item;
-
-            res.handled = false;
-            self.handled = true;
-
-            res
-        } else {
-            cold_path();
-
-            let res = Iart::<NewItem> {
-                handled: false,
-                data: None,
-                #[cfg(feature = "error-can-have-item")]
-                err_item: self.err_item.take().map(item_fns),
-                #[cfg(feature = "allow-backtrace-logging")]
-                log: self.log.take(),
-                trans_fns: None,
-            };
-
-            self.handled = true;
-
-            res
-        }
+        self.internal_map(fns)
     }
 
     #[track_caller]
     #[allow(rustdoc::broken_intra_doc_links)] // Because it should be correct but produces an error.
     #[doc = include_str!("../../../../doc/fn/Iart/map.md")]
-    pub fn map<F, NewItem>(mut self, fns: F) -> Iart<NewItem>
+    #[inline]
+    pub fn internal_map<F, NewItem>(mut self, fns: F) -> Iart<NewItem>
     where
         F: FnOnce(Item) -> NewItem,
     {
-        self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Map))
-            .unwrap();
-
-        if let Some(data) = self.data.take() {
-            let mut res: Iart<NewItem> = data.map(fns).into();
-
+        let res = Iart::<NewItem> {
+            handled: false,
+            data: self.data.take(),
+            item: self.item.take().map(fns),
             #[cfg(feature = "allow-backtrace-logging")]
-            {
-                res.log = self.log.take();
-            }
+            log: self.log.take(),
+            trans_fns: self.trans_fns.take(),
+        };
 
-            res.handled = false;
-            self.handled = true;
+        self.handled = true;
 
-            res
-        } else {
-            cold_path();
-
-            let res = Iart::<NewItem> {
-                handled: false,
-                data: None,
-                #[cfg(feature = "error-can-have-item")]
-                err_item: None,
-                #[cfg(feature = "allow-backtrace-logging")]
-                log: self.log.take(),
-                trans_fns: None,
-            };
-
-            self.handled = true;
-
-            res
-        }
+        res
     }
 }
 
@@ -758,49 +633,11 @@ impl<T: Debug> Debug for Iart<T> {
     }
 }
 
-impl<Item: Clone> Clone for Iart<Item> {
-    #[cfg(feature = "alloc")]
-    fn clone(&self) -> Self {
-        let new_data = self.data.as_ref().map(|d| match d {
-            Ok(item) => Ok(item.clone()),
-            Err(err_detail_box) => Err(Box::new((**err_detail_box).clone())),
-        });
-
-        Self {
-            handled: self.handled,
-            data: new_data,
-            #[cfg(feature = "allow-backtrace-logging")]
-            log: self.log.clone(),
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
-            trans_fns: self.trans_fns,
-        }
-    }
-
-    #[cfg(not(feature = "alloc"))]
-    fn clone(&self) -> Self {
-        let new_data = self.data.as_ref().map(|d| match d {
-            Ok(item) => Ok(item.clone()),
-            Err(err_detail_box) => Err(err_detail_box.clone()),
-        });
-
-        Self {
-            handled: self.handled,
-            data: new_data,
-            #[cfg(feature = "allow-backtrace-logging")]
-            log: self.log.clone(),
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
-            trans_fns: self.trans_fns,
-        }
-    }
-}
-
 impl<T> Default for Iart<T> {
     #[cfg(feature = "alloc")]
     fn default() -> Self {
         Self {
-            data: Some(Err(Box::new(ErrorDetail::default()))),
+            data: Some(Err(ErrorDetail::default())),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
             log: {
@@ -808,9 +645,8 @@ impl<T> Default for Iart<T> {
                 log.push_back(Location::caller());
                 Some(log)
             },
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
             trans_fns: Some(jen_fns!(DummyErr)),
+            item: None,
         }
     }
 
@@ -825,9 +661,8 @@ impl<T> Default for Iart<T> {
                 log[0] = Some(Location::caller());
                 Some(log)
             },
-            #[cfg(feature = "error-can-have-item")]
-            err_item: None,
             trans_fns: Some(jen_fns!(DummyErr)),
+            item: None,
         }
     }
 }
@@ -838,10 +673,7 @@ impl ErrorDetail {
     pub unsafe fn new(
         ty: Box<dyn IartErr + Send + Sync>,
         desc: Option<Cow<'static, str>>,
-        trans_fns: (
-            unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-            unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
-        ),
+        trans_fns: Trans,
     ) -> Self {
         Self {
             ty: Some(ty),
@@ -855,14 +687,7 @@ impl ErrorDetail {
     pub unsafe fn new(
         ty: &'static (dyn IartErr + Send + Sync),
         desc: Option<&'static str>,
-        trans_fns: (
-            unsafe fn(
-                &'static (dyn IartErr + Send + Sync),
-            ) -> &'static (dyn core::any::Any + Send + Sync),
-            unsafe fn(
-                &'static (dyn core::any::Any + Send + Sync),
-            ) -> &'static (dyn IartErr + Send + Sync),
-        ),
+        trans_fns: Trans,
     ) -> Self {
         Self {
             ty: Some(ty),
@@ -877,8 +702,8 @@ impl<T, E: IartErr + 'static + Send + Sync> From<Result<T, E>> for Iart<T> {
     #[track_caller]
     fn from(res: Result<T, E>) -> Self {
         match res {
-            Ok(val) => Iart::Ok(val),
-            Err(err) => Iart::Err(err, None),
+            Ok(val) => Iart::new_ok(val),
+            Err(err) => Iart::new_err(err, None),
         }
     }
 }
@@ -888,20 +713,20 @@ impl<T, E: IartErr + 'static + Send + Sync> From<Result<T, &'static E>> for Iart
     #[track_caller]
     fn from(res: Result<T, &'static E>) -> Self {
         match res {
-            Ok(val) => Iart::Ok(val),
-            Err(err) => Iart::Err(err, None),
+            Ok(val) => Iart::new_ok(val),
+            Err(err) => Iart::new_err(err, None),
         }
     }
 }
 
 #[cfg(feature = "alloc")]
-impl<T> From<Result<T, Box<ErrorDetail>>> for Iart<T> {
+impl<T> From<Result<T, ErrorDetail>> for Iart<T> {
     #[track_caller]
-    fn from(res: Result<T, Box<ErrorDetail>>) -> Self {
+    fn from(res: Result<T, ErrorDetail>) -> Self {
         match res {
-            Ok(val) => Iart::Ok(val),
+            Ok(val) => Iart::new_ok(val),
             Err(err) => {
-                let mut iart = Iart::Err(DummyErr {}, None);
+                let mut iart = Iart::new_err(DummyErr {}, None);
                 iart.trans_fns = Some(err.trans_fns);
                 iart.data = Some(Err(err));
 
@@ -916,9 +741,9 @@ impl<T> From<Result<T, ErrorDetail>> for Iart<T> {
     #[track_caller]
     fn from(res: Result<T, ErrorDetail>) -> Self {
         match res {
-            Ok(val) => Iart::Ok(val),
+            Ok(val) => Iart::new_ok(val),
             Err(err) => {
-                let mut iart = Iart::Err(&DummyErr {}, None);
+                let mut iart = Iart::new_err(&DummyErr {}, None);
                 iart.trans_fns = Some(err.trans_fns);
                 iart.data = Some(Err(err));
 

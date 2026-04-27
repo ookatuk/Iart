@@ -113,7 +113,7 @@ fn clear() {
 fn test_ok_behavior() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let w: Iart<i32> = Iart::Ok(42);
+    let w: Iart<i32> = Iart::new_ok(42);
     assert!(w.is_ok().unwrap());
     assert!(!w.is_err().unwrap());
     assert_eq!(w.unwrap(), 42);
@@ -125,7 +125,7 @@ fn test_handler_invocation() {
     set_handler(test_logger);
     clear();
 
-    let w: Iart<i32> = Iart::Ok(100);
+    let w: Iart<i32> = Iart::new_ok(100);
     let val = w.unwrap();
 
     assert_eq!(val, 100);
@@ -144,11 +144,11 @@ fn test_backtrace_logging() {
 
     #[cfg(feature = "alloc")]
     fn fail_point() -> Iart<i32> {
-        Iart::Err(MyError, None)
+        Iart::new_err(MyError, None)
     }
     #[cfg(not(feature = "alloc"))]
     fn fail_point() -> Iart<i32> {
-        Iart::Err(&MyError, None)
+        Iart::new_err(&MyError, None)
     }
 
     let mut w = fail_point();
@@ -170,7 +170,7 @@ fn test_backtrace_logging() {
 fn test_unwrap_err_panic() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let w: Iart<i32> = Iart::Ok(10);
+    let w: Iart<i32> = Iart::new_ok(10);
     let _ = w.unwrap_err();
 }
 
@@ -204,9 +204,9 @@ fn test_try_ok_flow() {
     let _guard = TEST_LOG_LOCK.lock();
 
     fn f() -> Iart<i32> {
-        let a = Iart::Ok(10)?;
-        let b = Iart::Ok(20)?;
-        Iart::Ok(a + b)
+        let a = Iart::new_ok(10)?;
+        let b = Iart::new_ok(20)?;
+        Iart::new_ok(a + b)
     }
 
     let res = f();
@@ -220,12 +220,12 @@ fn test_try_err_flow() {
 
     #[cfg(feature = "alloc")]
     fn f() -> Iart<i32> {
-        let _ = Iart::Err(MyError, Some("test"))?;
+        let _ = Iart::new_err(MyError, Some("test"))?;
         unreachable!();
     }
     #[cfg(not(feature = "alloc"))]
     fn f() -> Iart<i32> {
-        let _ = Iart::Err(&MyError, Some("test"))?;
+        let _ = Iart::new_err(&MyError, Some("test"))?;
         unreachable!();
     }
 
@@ -241,7 +241,7 @@ fn test_try_err_flow() {
 fn test_no_handler() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let w: Iart<i32> = Iart::Ok(1);
+    let w: Iart<i32> = Iart::new_ok(1);
     let _ = w.unwrap();
 }
 
@@ -258,9 +258,9 @@ fn test_drop_without_handling() {
 
     {
         #[cfg(feature = "alloc")]
-        let _w: Iart<i32> = Iart::Err(MyError, "a");
+        let _w: Iart<i32> = Iart::new_err(MyError, "a");
         #[cfg(not(feature = "alloc"))]
-        let _w: Iart<i32> = Iart::Err(&MyError, "a");
+        let _w: Iart<i32> = Iart::new_err(&MyError, "a");
     }
 
     let history = LOG_HISTORY.lock();
@@ -282,7 +282,7 @@ fn test_drop_without_handling_ok_version() {
     clear();
 
     {
-        let _w: Iart<i32> = Iart::Ok(5);
+        let _w: Iart<i32> = Iart::new_ok(5);
     }
 
     let history = LOG_HISTORY.lock();
@@ -298,19 +298,7 @@ fn test_drop_without_handling_ok_version() {
 #[cfg(feature = "danger-allow-panic-if-unused")]
 fn test_drop_without_handling_ok_version() {
     let _guard = TEST_LOG_LOCK.lock();
-    let _w: Iart<i32> = Iart::Ok(5);
-}
-
-#[test]
-fn test_clone_iart() {
-    let _guard = TEST_LOG_LOCK.lock();
-
-    let w: Iart<u32> = Iart::Ok(10);
-
-    let w2 = w.clone();
-
-    assert_eq!(w2.unwrap(), 10);
-    let _ = w.unwrap();
+    let _w: Iart<i32> = Iart::new_ok(5);
 }
 
 #[test]
@@ -318,9 +306,9 @@ fn test_error_preserved() {
     let _guard = TEST_LOG_LOCK.lock();
 
     #[cfg(feature = "alloc")]
-    let w: Iart<i32> = Iart::Err(MyError, "msg");
+    let w: Iart<i32> = Iart::new_err(MyError, "msg");
     #[cfg(not(feature = "alloc"))]
-    let w: Iart<i32> = Iart::Err(&MyError, "msg");
+    let w: Iart<i32> = Iart::new_err(&MyError, "msg");
 
     let err = w.unwrap_err().0;
 
@@ -332,7 +320,7 @@ fn test_error_preserved() {
 fn test_allocator_ok() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let w = Iart::Ok_in(42, Global);
+    let w = Iart::new_ok_in(42, Global);
     assert!(w.is_ok().unwrap());
     assert_eq!(w.unwrap(), 42);
 }
@@ -345,7 +333,7 @@ fn test_no_drop_after_unwrap() {
     clear();
 
     {
-        let w: Iart<i32> = Iart::Ok(5);
+        let w: Iart<i32> = Iart::new_ok(5);
         let _ = w.unwrap();
     }
 
@@ -373,9 +361,9 @@ fn test_drop_without_handling_if_panic_raised() {
 
     let _ = std::panic::catch_unwind(|| {
         #[cfg(feature = "alloc")]
-        let _w: Iart<i32> = Iart::Err(MyError, "panic test");
+        let _w: Iart<i32> = Iart::new_err(MyError, "panic test");
         #[cfg(not(feature = "alloc"))]
-        let _w: Iart<i32> = Iart::Err(&MyError, "panic test");
+        let _w: Iart<i32> = Iart::new_err(&MyError, "panic test");
 
         panic!("intentional panic");
     });
@@ -401,9 +389,9 @@ fn test_downcast_to_original_error() {
 
     let w = {
         #[cfg(feature = "alloc")]
-        let w: Iart<i32> = Iart::Err(crate::tests::MyError, "TEST");
+        let w: Iart<i32> = Iart::new_err(crate::tests::MyError, "TEST");
         #[cfg(not(feature = "alloc"))]
-        let w: Iart<i32> = Iart::Err(&MyError, "TEST");
+        let w: Iart<i32> = Iart::new_err(&MyError, "TEST");
 
         w
     };
@@ -422,9 +410,9 @@ fn new_version_ok_and_err() {
 
     let mut w = {
         #[cfg(feature = "alloc")]
-        let w: Iart<i32> = Iart::Err(MyError, "TEST");
+        let w: Iart<i32> = Iart::new_err(MyError, "TEST");
         #[cfg(not(feature = "alloc"))]
-        let w: Iart<i32> = Iart::Err(&MyError, "TEST");
+        let w: Iart<i32> = Iart::new_err(&MyError, "TEST");
 
         w
     };
@@ -482,18 +470,17 @@ fn cast_from() {
     assert_eq!(res.unwrap(), 56);
 }
 
-#[cfg(feature = "error-can-have-item")]
 #[test]
 fn test_error_item() {
     let _guard = TEST_LOG_LOCK.lock();
 
     #[cfg(feature = "alloc")]
     fn test() -> Iart<u32> {
-        Iart::Err_item(MyError, "error", 5)
+        Iart::new_err(MyError, "error").with_item(5).0
     }
     #[cfg(not(feature = "alloc"))]
     fn test() -> Iart<u32> {
-        Iart::Err_item(&MyError, "error", 5)
+        Iart::new_err(&MyError, "error").with_item(5).0
     }
 
     let res = test();
@@ -505,7 +492,7 @@ fn test_error_item() {
 fn test_map_and_handled_trace() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let res = Iart::<u32>::Ok(100);
+    let res = Iart::<u32>::new_ok(100);
     assert!(!res.handled);
 
     let res2 = res.map(|x| x);
@@ -514,37 +501,22 @@ fn test_map_and_handled_trace() {
     assert_eq!(res2.unwrap(), 100);
 }
 
-#[cfg(feature = "error-can-have-item")]
-#[test]
-fn test_map_err_item_transform() {
-    let _guard = TEST_LOG_LOCK.lock();
-
-    #[cfg(feature = "alloc")]
-    let res = Iart::<u32>::Err_item(MyError, "msg", 10);
-    #[cfg(not(feature = "alloc"))]
-    let res = Iart::<u32>::Err_item(&MyError, "msg", 10);
-
-    let res2 = res.map_err_item(|x| x, |item| item * 2);
-
-    assert!(!res2.handled);
-
-    let (_, item) = res2.unwrap_err();
-    assert_eq!(item, Some(20));
-}
-
 #[test]
 fn to_result() {
     let _guard = TEST_LOG_LOCK.lock();
 
     #[cfg(feature = "alloc")]
-    let res = Iart::<u32>::Err(MyError, "msg");
+    let res = Iart::<u32>::new_err(MyError, "msg");
     #[cfg(not(feature = "alloc"))]
-    let res = Iart::<u32>::Err(&MyError, "msg");
+    let res = Iart::<u32>::new_err(&MyError, "msg");
 
-    let res2 = Iart::<u32>::Ok(5);
+    let res2 = Iart::<u32>::new_ok(5);
     let _ = unsafe { res.to_result::<MyError>() }
         .unwrap()
-        .0
+        .error_data
         .unwrap_err();
-    unsafe { res2.to_result::<MyError>() }.unwrap().0.unwrap();
+    unsafe { res2.to_result::<MyError>() }
+        .unwrap()
+        .error_data
+        .unwrap();
 }

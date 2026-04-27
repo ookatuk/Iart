@@ -25,6 +25,7 @@ std = ["core-error/std", "alloc"]
 for-nightly-likely-optimization = []
 for-nightly-error-generic-member-access = []
 for-nightly-try-support = []
+for-nightly-allocator-api-support = ["alloc"]
 
 no-trace-dedup = []
 
@@ -35,10 +36,7 @@ check-unused-result = []
 check-unused-result-with-ok = ["check-unused-result"]
 danger-allow-panic-if-unused = ["check-unused-result-with-ok"]
 
-error-can-have-item = []
-
 core_error-support = ["core-error"]
 enable-default-handler = ["std"]
 
-for-nightly-allocator-api-support = ["alloc"]
 alloc = []

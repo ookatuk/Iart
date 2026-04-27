@@ -8,4 +8,7 @@ This effectively executes [`Result::ok`].
 
 # Errors
 
-If `data` is [`None`] or [`Err`]
+1. If `data` is [`None`] or [`Err`]
+
+# Panics
+1. If `item` is [`None`]

@@ -35,22 +35,25 @@ pub const fn const_str_to_usize(s: &str) -> usize {
 
 #[cfg(feature = "alloc")]
 macro_rules! jen_fns {
-    ($err_type:ty) => {
-        (
-            (|err: Box<dyn crate::types::IartErr + Send + Sync + 'static>| {
-                let raw_ptr = Box::into_raw(err);
-                let concrete_ptr = raw_ptr
-                    as *mut (dyn crate::types::IartErr + Send + Sync + 'static)
-                    as *mut $err_type;
-                unsafe {
-                    let b = Box::from_raw(concrete_ptr);
-                    b as Box<dyn core::any::Any + Send + Sync + 'static>
-                }
-            })
-                as unsafe fn(
-                    Box<dyn crate::types::IartErr + Send + Sync + 'static>,
-                ) -> Box<dyn core::any::Any + Send + Sync + 'static>,
-            (|any: Box<dyn core::any::Any + Send + Sync + 'static>| {
+    ($err_type:ty) => {{
+        let to_fn: unsafe fn(
+            Box<dyn crate::types::IartErr + Send + Sync + 'static>,
+        ) -> Box<dyn core::any::Any + Send + Sync + 'static> = |err: Box<
+            dyn crate::types::IartErr + Send + Sync + 'static,
+        >| {
+            let raw_ptr = Box::into_raw(err);
+            let concrete_ptr = raw_ptr as *mut (dyn crate::types::IartErr + Send + Sync + 'static)
+                as *mut $err_type;
+            unsafe {
+                let b = Box::from_raw(concrete_ptr);
+                b as Box<dyn core::any::Any + Send + Sync + 'static>
+            }
+        };
+
+        let from_fn: unsafe fn(
+            Box<dyn core::any::Any + Send + Sync + 'static>,
+        ) -> Box<dyn crate::types::IartErr + Send + Sync + 'static> =
+            |any: Box<dyn core::any::Any + Send + Sync + 'static>| {
                 let raw_ptr = Box::into_raw(any);
                 let concrete_ptr =
                     raw_ptr as *mut (dyn core::any::Any + Send + Sync + 'static) as *mut $err_type;
@@ -58,12 +61,13 @@ macro_rules! jen_fns {
                     let b = Box::from_raw(concrete_ptr);
                     b as Box<dyn crate::types::IartErr + Send + Sync + 'static>
                 }
-            })
-                as unsafe fn(
-                    Box<dyn core::any::Any + Send + Sync + 'static>,
-                ) -> Box<dyn crate::types::IartErr + Send + Sync + 'static>,
-        )
-    };
+            };
+
+        Trans {
+            from_any: from_fn,
+            to_any: to_fn,
+        }
+    }};
 
     ($err_type:ty, $alloc:ty) => {{
         let to_fn: unsafe fn(
@@ -94,37 +98,43 @@ macro_rules! jen_fns {
             }
         };
 
-        (to_fn, from_fn)
+        Trans {
+            from_any: from_fn,
+            to_any: to_fn,
+        }
     }};
 }
 
 #[cfg(not(feature = "alloc"))]
 macro_rules! jen_fns {
-    ($err_type:ty) => {
-        (
-            (|err: &'static (dyn crate::types::IartErr + Send + Sync + 'static)| {
+    ($err_type:ty) => {{
+        let to_fn: unsafe fn(
+            &'static (dyn crate::types::IartErr + Send + Sync + 'static),
+        ) -> &'static (dyn core::any::Any + Send + Sync + 'static) =
+            |err: &'static (dyn crate::types::IartErr + Send + Sync + 'static)| {
                 let concrete_ptr = err as *const (dyn crate::types::IartErr + Send + Sync + 'static)
                     as *const (dyn crate::types::IartErr + Send + Sync + 'static)
                     as *const $err_type;
                 unsafe { &(*concrete_ptr) as &'static (dyn core::any::Any + Send + Sync + 'static) }
-            })
-                as unsafe fn(
-                    &'static (dyn crate::types::IartErr + Send + Sync + 'static),
-                ) -> &'static (dyn core::any::Any + Send + Sync + 'static),
-            (|any: &'static (dyn core::any::Any + Send + Sync + 'static)| {
+            };
+        let from_fn: unsafe fn(
+            &'static (dyn core::any::Any + Send + Sync + 'static),
+        )
+            -> &'static (dyn crate::types::IartErr + Send + Sync + 'static) =
+            |any: &'static (dyn core::any::Any + Send + Sync + 'static)| {
                 let concrete_ptr = any as *const (dyn core::any::Any + Send + Sync + 'static)
                     as *const (dyn core::any::Any + Send + Sync + 'static)
                     as *const $err_type;
                 unsafe {
                     &(*concrete_ptr) as &'static (dyn crate::types::IartErr + Send + Sync + 'static)
                 }
-            })
-                as unsafe fn(
-                    &'static (dyn core::any::Any + Send + Sync + 'static),
-                )
-                    -> &'static (dyn crate::types::IartErr + Send + Sync + 'static),
-        )
-    };
+            };
+
+        Trans {
+            from_any: from_fn,
+            to_any: to_fn,
+        }
+    }};
 }
 
 #[allow(unused)]

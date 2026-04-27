@@ -7,5 +7,5 @@ This effectively performs [`Result::unwrap`].
 3. The call location is recorded.
 
 # Panics
-
-If `data` is [`None`] or [`Result::Err`]
+1. If `data` is [`None`] or [`Result::Err`]
+2. If `item` is [`None`]

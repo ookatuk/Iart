@@ -39,8 +39,6 @@ check-unused-result = ["iart-core/check-unused-result"]
 check-unused-result-with-ok = ["iart-core/check-unused-result-with-ok"]
 danger-allow-panic-if-unused = ["iart-core/danger-allow-panic-if-unused"]
 
-error-can-have-item = ["iart-core/error-can-have-item"]
-
 core_error-support = ["iart-core/core_error-support"]
 enable-default-handler = ["iart-core/enable-default-handler"]
 

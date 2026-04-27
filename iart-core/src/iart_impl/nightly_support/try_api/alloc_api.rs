@@ -16,7 +16,7 @@ impl<Item: Debug, A: alloc::alloc::Allocator + Clone + 'static + Default + Send 
 
     #[inline]
     fn from_output(output: Self::Output) -> Iart<Item, A> {
-        Iart::<Item, A>::Ok_in(output, A::default())
+        Iart::<Item, A>::new_ok_in(output, A::default())
     }
 
     #[track_caller]
@@ -30,9 +30,10 @@ impl<Item: Debug, A: alloc::alloc::Allocator + Clone + 'static + Default + Send 
         };
 
         match self.data.take() {
-            Some(Ok(item)) => {
+            Some(Ok(_)) => {
                 self.handled = true;
-                ControlFlow::Continue(item)
+                self.data = Some(Ok(()));
+                ControlFlow::Continue(self.item.take().unwrap())
             }
             Some(Err(err)) => {
                 self.data = Some(Err(err));
@@ -51,14 +52,13 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static + Default + Send + Sync 
         let alloc = residual.allocator.clone();
         residual.handled = true;
         Self {
-            data: residual.data.take().map(|d| Err(unsafe { d.unwrap_err() })),
+            data: residual.data.take().map(|d| Err(d.unwrap_err())),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
             log: residual.log.take(),
             allocator: alloc,
-            #[cfg(feature = "error-can-have-item")]
-            err_item: residual.err_item.take().map(|_| unreachable!()),
-            trans_fns: residual.trans_fns,
+            trans_fns: residual.trans_fns.clone(),
+            item: None,
         }
     }
 }
@@ -80,6 +80,6 @@ where
     fn from_residual(residual: Result<Infallible, E>) -> Self {
         let err = unsafe { residual.unwrap_err_unchecked() };
 
-        Self::Err_in(err, None, A::default())
+        Self::new_err_in(err, None, A::default())
     }
 }

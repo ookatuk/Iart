@@ -1,10 +1,8 @@
-use crate::IartErr;
-use crate::events::AutoRequestType::{
-    ToResult, ToResultFail, TryDownCastFail, TryDownCastUsed, TryUsed,
-};
+use crate::events::AutoRequestType::{ToResult, TryDownCastFail, TryDownCastUsed, TryUsed};
 use crate::events::IartEvent;
 use crate::types::{DummyErr, ErrorDetail, Iart};
 use crate::utils::{cold_path, unlikely};
+use crate::{ToResultRet, Trans};
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
 #[cfg(feature = "alloc")]
@@ -43,11 +41,11 @@ impl ErrorDetail {
     #[cfg(feature = "alloc")]
     pub unsafe fn try_cast_err<T: 'static>(&mut self) -> Option<Box<T>> {
         let data = self.ty.take()?;
-        let res = unsafe { (self.trans_fns.0)(data) };
+        let res = unsafe { (self.trans_fns.to_any)(data) };
         match res.downcast::<T>() {
             Ok(t) => Some(t),
             Err(item) => {
-                self.ty = Some(unsafe { (self.trans_fns.1)(item) });
+                self.ty = Some(unsafe { (self.trans_fns.from_any)(item) });
                 None
             }
         }
@@ -58,12 +56,18 @@ impl ErrorDetail {
     #[cfg(not(feature = "alloc"))]
     pub unsafe fn try_cast_err<T: 'static>(&mut self) -> Option<&'static T> {
         let data = self.ty.take()?;
-        let res = unsafe { (self.trans_fns.0)(data) };
-        res.downcast_ref::<T>()
+        let res = unsafe { (self.trans_fns.to_any)(data) };
+        match res.downcast_ref::<T>() {
+            Some(t) => Some(t),
+            None => {
+                self.ty = Some(data);
+                None
+            }
+        }
     }
 }
 
-impl<Item: core::fmt::Debug> Iart<Item> {
+impl<Item> Iart<Item> {
     #[inline]
     #[must_use]
     #[doc = include_str!("../../doc/fn/Iart/is_ok.md")]
@@ -97,170 +101,50 @@ impl<Item: core::fmt::Debug> Iart<Item> {
 
     #[track_caller]
     #[doc = include_str!("../../doc/fn/Iart/to_result.md")]
-    #[cfg(feature = "alloc")]
-    pub unsafe fn to_result<T: 'static>(
-        mut self,
-    ) -> Result<
-        (
-            Result<(), (T, Box<ErrorDetail>)>,
-            Option<Item>,
-            Option<VecDeque<&'static Location<'static>>>,
-        ),
-        Self,
-    >
+    pub unsafe fn to_result<E: 'static>(mut self) -> Result<ToResultRet<E, Item>, Self>
     where
         Item: Debug,
     {
         self.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResult))
             .unwrap();
 
-        #[cfg(feature = "allow-backtrace-logging")]
-        let log = self.log.take();
-        #[cfg(not(feature = "allow-backtrace-logging"))]
-        let log = None;
-
-        #[cfg(feature = "error-can-have-item")]
-        let err_item = self.err_item.take();
-
-        #[cfg(not(feature = "error-can-have-item"))]
-        let err_item = None;
-
-        self.handled = true;
-
-        match self.is_ok() {
-            Some(false) => match unsafe { self.try_downcast::<T>() } {
-                Err(mut me) => {
-                    cold_path();
-                    #[cfg(feature = "allow-backtrace-logging")]
-                    {
-                        me.log = log;
-                    }
-                    #[cfg(feature = "error-can-have-item")]
-                    {
-                        me.err_item = err_item;
-                    }
-
-                    me.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResultFail))
-                        .unwrap();
-
-                    me.handled = false;
-
-                    Err(me)
-                }
-                Ok(item) => Ok((Err(item), err_item, log)),
-            },
-            Some(true) => {
-                let res = unsafe { self.data.take().unwrap_unchecked().unwrap_unchecked() };
-                Ok((Ok(()), Some(res), log))
-            }
-            None => {
-                cold_path();
-
-                #[cfg(feature = "allow-backtrace-logging")]
-                {
-                    self.log = log;
-                }
-
-                #[cfg(feature = "error-can-have-item")]
-                {
-                    self.err_item = err_item;
-                }
-
-                self.handled = false;
-
-                self.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResultFail))
-                    .unwrap();
-
-                Err(self)
-            }
+        if self.data.is_none() {
+            cold_path();
+            debug_assert!(false, "Iart: to_result called after consumption");
+            return Err(self);
         }
-    }
-
-    #[track_caller]
-    #[doc = include_str!("../../doc/fn/Iart/to_result.md")]
-    #[cfg(not(feature = "alloc"))]
-    pub unsafe fn to_result<T: 'static>(
-        mut self,
-    ) -> Result<
-        (
-            Result<(), (&'static T, ErrorDetail)>,
-            Option<Item>,
-            Option<[Option<&'static Location<'static>>; BACK_TRACE_MAX]>,
-        ),
-        Self,
-    >
-    where
-        Item: Debug,
-    {
-        self.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResult))
-            .unwrap();
 
         #[cfg(feature = "allow-backtrace-logging")]
         let log = self.log.take();
-        #[cfg(not(feature = "allow-backtrace-logging"))]
-        let log = None;
 
-        #[cfg(feature = "error-can-have-item")]
-        let err_item = self.err_item.take();
-
-        #[cfg(not(feature = "error-can-have-item"))]
-        let err_item = None;
-
-        self.handled = true;
-
-        match self.is_ok() {
-            Some(false) => match unsafe { self.try_downcast::<T>() } {
-                Err(mut me) => {
-                    cold_path();
-                    #[cfg(feature = "allow-backtrace-logging")]
-                    {
-                        me.log = log;
+        let data = {
+            let raw_data = self.data.take().unwrap();
+            match raw_data {
+                Ok(_) => Ok(()),
+                Err(mut data) => {
+                    let err = unsafe { data.try_cast_err::<E>() };
+                    if err.is_none() {
+                        self.data = Some(Err(data));
+                        return Err(self);
                     }
-                    #[cfg(feature = "error-can-have-item")]
-                    {
-                        me.err_item = err_item;
-                    }
-
-                    me.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResultFail))
-                        .unwrap();
-
-                    me.handled = false;
-
-                    Err(me)
+                    let err = err.unwrap();
+                    Err((err, data))
                 }
-                Ok(item) => Ok((Err(item), err_item, log)),
-            },
-            Some(true) => {
-                let res = unsafe { self.data.take().unwrap_unchecked().unwrap_unchecked() };
-                Ok((Ok(()), Some(res), log))
             }
-            None => {
-                cold_path();
+        };
 
-                #[cfg(feature = "allow-backtrace-logging")]
-                {
-                    self.log = log;
-                }
-
-                #[cfg(feature = "error-can-have-item")]
-                {
-                    self.err_item = err_item;
-                }
-
-                self.handled = false;
-
-                self.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResultFail))
-                    .unwrap();
-
-                Err(self)
-            }
-        }
+        Ok(ToResultRet {
+            error_data: data,
+            item: self.item.take(),
+            #[cfg(feature = "allow-backtrace-logging")]
+            backtrace: log,
+        })
     }
 
     #[track_caller]
     #[doc = include_str!("../../doc/fn/Iart/try_downcast.md")]
     #[cfg(feature = "alloc")]
-    pub unsafe fn try_downcast<T: 'static>(mut self) -> Result<(T, Box<ErrorDetail>), Self>
+    pub unsafe fn try_downcast<T: 'static>(mut self) -> Result<(T, ErrorDetail), Self>
     where
         Item: Debug,
     {
@@ -283,12 +167,12 @@ impl<Item: core::fmt::Debug> Iart<Item> {
         let mut detail = unsafe { data.unwrap().unwrap_err_unchecked() };
         let ty = detail.ty.take().unwrap();
 
-        let data = unsafe { (detail.trans_fns.0)(ty) };
+        let data = unsafe { (detail.trans_fns.to_any)(ty) };
 
         match data.downcast::<T>() {
             Err(item) => {
                 cold_path();
-                detail.ty = Some(unsafe { (detail.trans_fns.1)(item) });
+                detail.ty = Some(unsafe { (detail.trans_fns.from_any)(item) });
                 self.data = Some(Err(detail));
                 let _ = self.send_log_to_handler::<true>(IartEvent::FunctionHook(TryDownCastFail));
                 Err(self)
@@ -329,11 +213,12 @@ impl<Item: core::fmt::Debug> Iart<Item> {
         let mut detail = unsafe { data.unwrap().unwrap_err_unchecked() };
         let ty = detail.ty.take().unwrap();
 
-        let data = unsafe { (detail.trans_fns.0)(ty) };
+        let data = unsafe { (detail.trans_fns.to_any)(ty) };
 
         match data.downcast_ref::<T>() {
             None => {
                 cold_path();
+                detail.ty = Some(unsafe { (detail.trans_fns.from_any)(data) });
                 self.data = Some(Err(detail));
                 let _ = self.send_log_to_handler::<true>(IartEvent::FunctionHook(TryDownCastFail));
                 Err(self)
@@ -346,6 +231,14 @@ impl<Item: core::fmt::Debug> Iart<Item> {
         }
     }
 
+    #[inline]
+    pub fn with_item(mut self, item: Item) -> (Self, Option<Item>) {
+        let old = self.item.take();
+        self.item = Some(item);
+
+        (self, old)
+    }
+
     #[doc(hidden)]
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_send_try_used.md")]
@@ -356,16 +249,7 @@ impl<Item: core::fmt::Debug> Iart<Item> {
     #[doc(hidden)]
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_take_data.md")]
-    #[cfg(feature = "alloc")]
-    pub unsafe fn __internal_take_data(&mut self) -> Option<Result<Item, Box<ErrorDetail>>> {
-        self.data.take()
-    }
-
-    #[doc(hidden)]
-    #[inline(always)]
-    #[doc = include_str!("../../doc/fn/Iart/__internal_take_data.md")]
-    #[cfg(not(feature = "alloc"))]
-    pub unsafe fn __internal_take_data(&mut self) -> Option<Result<Item, ErrorDetail>> {
+    pub unsafe fn __internal_take_data(&mut self) -> Option<Result<(), ErrorDetail>> {
         self.data.take()
     }
 
@@ -398,30 +282,7 @@ impl<Item: core::fmt::Debug> Iart<Item> {
     #[doc(hidden)]
     #[inline]
     #[doc = include_str!("../../doc/fn/Iart/__internal_get_trans_fns.md")]
-    #[cfg(feature = "alloc")]
-    pub unsafe fn __internal_get_trans_fns(
-        &mut self,
-    ) -> Option<(
-        unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-        unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
-    )> {
-        self.trans_fns.clone()
-    }
-
-    #[doc(hidden)]
-    #[inline]
-    #[doc = include_str!("../../doc/fn/Iart/__internal_get_trans_fns.md")]
-    #[cfg(not(feature = "alloc"))]
-    pub unsafe fn __internal_get_trans_fns(
-        &mut self,
-    ) -> Option<(
-        unsafe fn(
-            &'static (dyn IartErr + Send + Sync),
-        ) -> &'static (dyn core::any::Any + Send + Sync),
-        unsafe fn(
-            &'static (dyn core::any::Any + Send + Sync),
-        ) -> &'static (dyn IartErr + Send + Sync),
-    )> {
+    pub unsafe fn __internal_get_trans_fns(&mut self) -> Option<Trans> {
         self.trans_fns.clone()
     }
 
@@ -430,18 +291,6 @@ impl<Item: core::fmt::Debug> Iart<Item> {
     #[doc = include_str!("../../doc/fn/Iart/__internal_mark_handled.md")]
     pub unsafe fn __internal_mark_handled(&mut self) {
         self.handled = true;
-    }
-
-    #[doc(hidden)]
-    #[inline(always)]
-    #[doc = include_str!("../../doc/fn/Iart/__internal_take_err_item.md")]
-    pub unsafe fn __internal_take_err_item(&mut self) -> Option<Item> {
-        #[cfg(feature = "error-can-have-item")]
-        let res = self.err_item.take();
-        #[cfg(not(feature = "error-can-have-item"))]
-        let res = None;
-
-        res
     }
 
     #[doc(hidden)]
@@ -465,21 +314,17 @@ impl<Item: core::fmt::Debug> Iart<Item> {
     #[doc = include_str!("../../doc/fn/Iart/__internal_rebuild_err.md")]
     #[cfg(feature = "alloc")]
     pub unsafe fn __internal_rebuild_err(
-        err: Box<ErrorDetail>,
+        err: ErrorDetail,
         #[allow(unused)] log: Option<VecDeque<&'static Location<'static>>>,
-        trans_fns: Option<(
-            unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-            unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
-        )>,
-        #[allow(unused)] err_item: Option<Item>,
+        trans_fns: Option<Trans>,
+        item: Option<Item>,
         #[cfg(feature = "for-nightly-allocator-api-support")] alloc: Option<alloc::alloc::Global>,
         #[cfg(not(feature = "for-nightly-allocator-api-support"))] _alloc: Option<u32>,
     ) -> Self {
         Self {
             handled: false,
             data: Some(Err(err)),
-            #[cfg(feature = "error-can-have-item")]
-            err_item,
+            item,
             #[cfg(feature = "allow-backtrace-logging")]
             log,
             trans_fns,
@@ -490,33 +335,29 @@ impl<Item: core::fmt::Debug> Iart<Item> {
 
     #[doc(hidden)]
     #[inline(always)]
+    #[doc = include_str!("../../doc/fn/Iart/__internal_take_item_unwrap.md")]
+    pub unsafe fn __internal_take_item_unwrap(&mut self) -> Item {
+        self.item.take().unwrap()
+    }
+
+    #[doc(hidden)]
+    #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_rebuild_err.md")]
     #[cfg(not(feature = "alloc"))]
     pub unsafe fn __internal_rebuild_err(
         err: ErrorDetail,
         #[allow(unused)] log: Option<[Option<&'static Location<'static>>; BACK_TRACE_MAX]>,
-        trans_fns: Option<(
-            unsafe fn(
-                &'static (dyn IartErr + Send + Sync),
-            ) -> &'static (dyn core::any::Any + Send + Sync),
-            unsafe fn(
-                &'static (dyn core::any::Any + Send + Sync),
-            ) -> &'static (dyn IartErr + Send + Sync),
-        )>,
-        #[allow(unused)] err_item: Option<Item>,
-        #[cfg(feature = "for-nightly-allocator-api-support")] alloc: Option<alloc::alloc::Global>,
-        #[cfg(not(feature = "for-nightly-allocator-api-support"))] _alloc: Option<u32>,
+        trans_fns: Option<Trans>,
+        item: Option<Item>,
+        _alloc: Option<u32>,
     ) -> Self {
         Self {
             handled: false,
             data: Some(Err(err)),
-            #[cfg(feature = "error-can-have-item")]
-            err_item,
+            item,
             #[cfg(feature = "allow-backtrace-logging")]
             log,
             trans_fns,
-            #[cfg(feature = "for-nightly-allocator-api-support")]
-            allocator: alloc.unwrap(),
         }
     }
 }

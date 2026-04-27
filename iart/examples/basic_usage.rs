@@ -23,7 +23,7 @@ impl Display for MyErr {
 impl core::error::Error for MyErr {}
 
 fn add(x: i32, y: i32) -> Iart<i32> {
-    Iart::Ok(x + y)
+    Iart::new_ok(x + y)
 }
 
 fn error_raise() -> Iart<i32> {
@@ -32,14 +32,14 @@ fn error_raise() -> Iart<i32> {
     #[cfg(feature = "alloc")]
     let data = MyErr { data: "hi!" };
 
-    Iart::Err(data, "example")
+    Iart::new_err(data, "example")
 }
 
 fn use_try() -> Iart<i32> {
     #[allow(unexpected_cfgs)]
     let _ = iart_try!(error_raise());
 
-    Iart::Ok(-1)
+    unreachable!();
 }
 
 fn handler(event: IartEvent, iart: IartHandleDetails) -> core::fmt::Result {

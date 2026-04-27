@@ -8,5 +8,5 @@
 
 # Safety
 
-1. If `data` is not [`Some`], `UB` occurs via [`Option::take`]->[`Option::unwrap_unchecked`].
-2. If `data` is not [`Ok`], `UB` occurs in [`Result::unwrap_unchecked`].
+1. If `item` is not [`Some`], `UB` occurs via [`Option::take`]->[`Option::unwrap_unchecked`].
+2. If the `data` is not `OK`, an effective `UB` occurs where, if data was present at the time of the error, the data is entered and treated as a success.

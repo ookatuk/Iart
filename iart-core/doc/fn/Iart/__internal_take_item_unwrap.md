@@ -1,6 +1,4 @@
-Take the item in case of an error.
-
-If the `error-can-have-item` feature is turned off, it will always return [`None`].
+Take the item.
 
 # Safety
 

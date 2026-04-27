@@ -16,7 +16,7 @@ where
 
     #[inline]
     fn from_output(output: Self::Output) -> Self {
-        Self::Ok(output)
+        Self::new_ok(output)
     }
 
     #[track_caller]
@@ -31,15 +31,11 @@ where
 
         if self.is_ok().unwrap_or(false) {
             self.handled = true;
-            ControlFlow::Continue(self.data.take().unwrap().unwrap())
+            ControlFlow::Continue(self.item.take().unwrap())
         } else {
             let clos = |_| -> Infallible { unreachable!() };
 
-            #[cfg(feature = "error-can-have-item")]
-            let res: Iart<Infallible> = self.map_err_item(clos, clos);
-
-            #[cfg(not(feature = "error-can-have-item"))]
-            let res: Iart<Infallible> = self.map(clos);
+            let res: Iart<Infallible> = self.internal_map(clos);
 
             ControlFlow::Break(res)
         }
@@ -68,7 +64,7 @@ where
     fn from_residual(residual: Result<Infallible, E>) -> Self {
         let err = unsafe { residual.unwrap_err_unchecked() };
 
-        Self::Err(err, None)
+        Self::new_err(err, None)
     }
 }
 
@@ -81,7 +77,7 @@ where
     fn from_residual(residual: Result<Infallible, &'static E>) -> Self {
         let err = unsafe { residual.unwrap_err_unchecked() };
 
-        Self::Err(err, None)
+        Self::new_err(err, None)
     }
 }
 

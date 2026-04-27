@@ -12,22 +12,8 @@ pub struct ErrorDetail<A: alloc::alloc::Allocator + Clone = alloc::alloc::Global
     #[doc = include_str!("../doc/variable/ErrorDetail/ty.md")]
     pub ty: Option<&'static (dyn IartErr<A> + Send + Sync, A)>,
 
-    #[cfg(feature = "alloc")]
     #[doc = include_str!("../doc/variable/global/trans_fns.md")]
-    pub(crate) trans_fns: (
-        unsafe fn(Box<dyn IartErr<A> + Send + Sync, A>) -> Box<dyn core::any::Any + Send + Sync, A>,
-        unsafe fn(Box<dyn core::any::Any + Send + Sync, A>) -> Box<dyn IartErr<A> + Send + Sync, A>,
-    ),
-    #[cfg(not(feature = "alloc"))]
-    #[doc = include_str!("../doc/variable/global/trans_fns.md")]
-    pub(crate) trans_fns: (
-        unsafe fn(
-            &'static (dyn IartErr<A> + Send + Sync),
-        ) -> &'static (dyn core::any::Any + Send + Sync),
-        unsafe fn(
-            &'static (dyn core::any::Any + Send + Sync),
-        ) -> &'static (dyn IartErr<A> + Send + Sync),
-    ),
+    pub(crate) trans_fns: Trans<A>,
 
     #[cfg(feature = "alloc")]
     #[doc = include_str!("../doc/variable/ErrorDetail/desc.md")]
@@ -35,6 +21,20 @@ pub struct ErrorDetail<A: alloc::alloc::Allocator + Clone = alloc::alloc::Global
     #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../doc/variable/ErrorDetail/desc.md")]
     pub desc: Option<&'static str>,
+}
+
+pub struct ToResultRet<T: 'static, Item = ()> {
+    #[cfg(feature = "alloc")]
+    pub error_data: Result<(), (Box<T>, ErrorDetail)>,
+    #[cfg(not(feature = "alloc"))]
+    pub error_data: Result<(), (&'static T, ErrorDetail)>,
+
+    #[cfg(all(feature = "alloc", feature = "allow-backtrace-logging"))]
+    pub backtrace: Option<VecDeque<&'static Location<'static>>>,
+    #[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
+    pub backtrace: Option<[Option<&'static Location<'static>>; BACK_TRACE_MAX]>,
+
+    pub item: Option<Item>,
 }
 
 #[must_use]
@@ -49,22 +49,8 @@ pub struct ErrorDetail {
     #[doc = include_str!("../doc/variable/ErrorDetail/ty.md")]
     pub ty: Option<&'static (dyn IartErr + Send + Sync)>,
 
-    #[cfg(feature = "alloc")]
     #[doc = include_str!("../doc/variable/global/trans_fns.md")]
-    pub(crate) trans_fns: (
-        unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-        unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
-    ),
-    #[cfg(not(feature = "alloc"))]
-    #[doc = include_str!("../doc/variable/global/trans_fns.md")]
-    pub(crate) trans_fns: (
-        unsafe fn(
-            &'static (dyn IartErr + Send + Sync),
-        ) -> &'static (dyn core::any::Any + Send + Sync),
-        unsafe fn(
-            &'static (dyn core::any::Any + Send + Sync),
-        ) -> &'static (dyn IartErr + Send + Sync),
-    ),
+    pub(crate) trans_fns: Trans,
 
     #[cfg(feature = "alloc")]
     #[doc = include_str!("../doc/variable/ErrorDetail/desc.md")]
@@ -91,6 +77,26 @@ mod non_api_impl {
     pub type IartLogger =
         for<'a, 'b> fn(event: IartEvent<'a, 'b>, iart: IartHandleDetails) -> core::fmt::Result;
 
+    #[doc = include_str!("../doc/structs/Trans.md")]
+    #[derive(Clone, Copy, Debug)]
+    pub struct Trans {
+        #[cfg(feature = "alloc")]
+        pub to_any:
+            unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
+        #[cfg(feature = "alloc")]
+        pub from_any:
+            unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
+
+        #[cfg(not(feature = "alloc"))]
+        pub to_any: unsafe fn(
+            &'static (dyn IartErr + Send + Sync),
+        ) -> &'static (dyn core::any::Any + Send + Sync),
+        #[cfg(not(feature = "alloc"))]
+        pub from_any: unsafe fn(
+            &'static (dyn core::any::Any + Send + Sync),
+        ) -> &'static (dyn IartErr + Send + Sync),
+    }
+
     #[cfg(not(feature = "for-nightly-error-generic-member-access"))]
     #[doc = include_str!("../doc/trait/IartErr.md")]
     #[must_use]
@@ -112,10 +118,6 @@ mod non_api_impl {
     #[doc = include_str!("../doc/structs/IartHandleDetails.md")]
     pub struct IartHandleDetails<'a> {
         #[doc = include_str!("../doc/variable/IartHandleDetails/detail.md")]
-        #[cfg(feature = "alloc")]
-        pub detail: Option<&'a Box<ErrorDetail>>,
-        #[cfg(not(feature = "alloc"))]
-        #[doc = include_str!("../doc/variable/IartHandleDetails/detail.md")]
         pub detail: Option<&'a ErrorDetail>,
 
         pub is_err: Option<bool>,
@@ -135,15 +137,10 @@ mod non_api_impl {
         pub(crate) handled: bool,
 
         #[doc = include_str!("../doc/variable/Iart/data.md")]
-        #[cfg(feature = "alloc")]
-        pub(crate) data: Option<Result<Item, Box<ErrorDetail>>>,
-        #[cfg(not(feature = "alloc"))]
-        #[doc = include_str!("../doc/variable/Iart/data.md")]
-        pub(crate) data: Option<Result<Item, ErrorDetail>>,
+        pub(crate) data: Option<Result<(), ErrorDetail>>,
 
-        #[cfg(feature = "error-can-have-item")]
-        #[doc = include_str!("../doc/variable/Iart/err_item.md")]
-        pub(crate) err_item: Option<Item>,
+        #[doc = include_str!("../doc/variable/global/item.md")]
+        pub(crate) item: Option<Item>,
 
         #[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
         #[doc = include_str!("../doc/variable/Iart/log.md")]
@@ -153,22 +150,8 @@ mod non_api_impl {
         #[doc = include_str!("../doc/variable/Iart/log.md")]
         pub(crate) log: Option<[Option<&'static Location<'static>>; BACK_TRACE_MAX]>,
 
-        #[cfg(feature = "alloc")]
         #[doc = include_str!("../doc/variable/global/trans_fns.md")]
-        pub(crate) trans_fns: Option<(
-            unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-            unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
-        )>,
-        #[cfg(not(feature = "alloc"))]
-        #[doc = include_str!("../doc/variable/global/trans_fns.md")]
-        pub(crate) trans_fns: Option<(
-            unsafe fn(
-                &'static (dyn IartErr + Send + Sync),
-            ) -> &'static (dyn core::any::Any + Send + Sync),
-            unsafe fn(
-                &'static (dyn core::any::Any + Send + Sync),
-            ) -> &'static (dyn IartErr + Send + Sync),
-        )>,
+        pub(crate) trans_fns: Option<Trans>,
     }
 }
 
@@ -208,6 +191,17 @@ mod api_impl {
             Self: 'a;
     }
 
+    #[doc = include_str!("../doc/structs/Trans.md")]
+    #[derive(Debug, Clone, Copy)]
+    pub struct Trans<A: alloc::alloc::Allocator + Clone = alloc::alloc::Global> {
+        pub to_any: unsafe fn(
+            Box<dyn IartErr<A> + Send + Sync, A>,
+        ) -> Box<dyn core::any::Any + Send + Sync, A>,
+        pub from_any: unsafe fn(
+            Box<dyn core::any::Any + Send + Sync, A>,
+        ) -> Box<dyn IartErr<A> + Send + Sync, A>,
+    }
+
     pub type IartLogger<A = alloc::alloc::Global> =
         for<'a, 'b> fn(event: IartEvent<'a, 'b>, iart: IartHandleDetails<A>) -> core::fmt::Result;
 
@@ -216,7 +210,7 @@ mod api_impl {
     #[derive(Clone, Debug)]
     pub struct IartHandleDetails<'a, A: alloc::alloc::Allocator + Clone = alloc::alloc::Global> {
         #[doc = include_str!("../doc/variable/IartHandleDetails/detail.md")]
-        pub detail: Option<&'a Box<ErrorDetail<A>, A>>,
+        pub detail: Option<&'a ErrorDetail<A>>,
 
         #[cfg(feature = "allow-backtrace-logging")]
         #[doc = include_str!("../doc/variable/IartHandleDetails/log.md")]
@@ -232,28 +226,20 @@ mod api_impl {
         pub(crate) handled: bool,
 
         #[doc = include_str!("../doc/variable/Iart/data.md")]
-        pub(crate) data: Option<Result<Item, Box<ErrorDetail<A>, A>>>,
+        pub(crate) data: Option<Result<(), ErrorDetail<A>>>,
 
         #[cfg(feature = "allow-backtrace-logging")]
         #[doc = include_str!("../doc/variable/Iart/log.md")]
         pub(crate) log: Option<VecDeque<&'static Location<'static>, A>>,
 
-        #[cfg(feature = "error-can-have-item")]
-        #[doc = include_str!("../doc/variable/Iart/err_item.md")]
-        pub(crate) err_item: Option<Item>,
+        #[doc = include_str!("../doc/variable/global/item.md")]
+        pub(crate) item: Option<Item>,
 
         #[doc = include_str!("../doc/variable/Iart/allocator.md")]
         pub(crate) allocator: A,
 
         #[doc = include_str!("../doc/variable/global/trans_fns.md")]
-        pub(crate) trans_fns: Option<(
-            unsafe fn(
-                Box<dyn IartErr<A> + Send + Sync, A>,
-            ) -> Box<dyn core::any::Any + Send + Sync, A>,
-            unsafe fn(
-                Box<dyn core::any::Any + Send + Sync, A>,
-            ) -> Box<dyn IartErr<A> + Send + Sync, A>,
-        )>,
+        pub(crate) trans_fns: Option<Trans<A>>,
     }
 }
 
@@ -264,11 +250,17 @@ pub use api_impl::*;
 #[doc(inline)]
 pub use non_api_impl::*;
 
+#[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
+use crate::BACK_TRACE_MAX;
 #[cfg(feature = "alloc")]
 use alloc::borrow::Cow;
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
+#[cfg(all(feature = "alloc", feature = "allow-backtrace-logging"))]
+use alloc::collections::VecDeque;
 use core::fmt::{Display, Formatter};
+#[cfg(feature = "allow-backtrace-logging")]
+use core::panic::Location;
 
 #[derive(Debug, Clone)]
 #[doc = include_str!("../doc/structs/DummyErr.md")]
