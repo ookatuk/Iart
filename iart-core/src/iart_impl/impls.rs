@@ -317,6 +317,16 @@ impl<Item> Iart<Item> {
 
     #[doc(hidden)]
     #[inline(always)]
+    pub unsafe fn __internal_take_track_id(&mut self) -> Option<usize> {
+        // TODO: DOC
+        #[cfg(feature = "enable-pending-tracker")]
+        return self.tracking_id.take();
+        #[cfg(not(feature = "enable-pending-tracker"))]
+        return None;
+    }
+
+    #[doc(hidden)]
+    #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_rebuild_err.md")]
     #[cfg(feature = "alloc")]
     pub unsafe fn __internal_rebuild_err(
@@ -326,6 +336,7 @@ impl<Item> Iart<Item> {
         item: Option<Item>,
         #[cfg(feature = "for-nightly-allocator-api-support")] alloc: Option<alloc::alloc::Global>,
         #[cfg(not(feature = "for-nightly-allocator-api-support"))] _alloc: Option<u32>,
+        #[allow(unused)] track_id: Option<usize>,
     ) -> Self {
         Self {
             handled: false,
@@ -336,14 +347,9 @@ impl<Item> Iart<Item> {
             trans_fns,
             #[cfg(feature = "for-nightly-allocator-api-support")]
             allocator: alloc.unwrap(),
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: track_id,
         }
-    }
-
-    #[doc(hidden)]
-    #[inline(always)]
-    #[doc = include_str!("../../doc/fn/Iart/__internal_take_item_unwrap.md")]
-    pub unsafe fn __internal_take_item_unwrap(&mut self) -> Item {
-        self.item.take().unwrap()
     }
 
     #[doc(hidden)]
@@ -356,6 +362,7 @@ impl<Item> Iart<Item> {
         trans_fns: Option<Trans>,
         item: Option<Item>,
         _alloc: Option<u32>,
+        #[allow(unused)] track_id: Option<usize>,
     ) -> Self {
         Self {
             handled: false,
@@ -364,7 +371,16 @@ impl<Item> Iart<Item> {
             #[cfg(feature = "allow-backtrace-logging")]
             log,
             trans_fns,
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: track_id,
         }
+    }
+
+    #[doc(hidden)]
+    #[inline(always)]
+    #[doc = include_str!("../../doc/fn/Iart/__internal_take_item_unwrap.md")]
+    pub unsafe fn __internal_take_item_unwrap(&mut self) -> Item {
+        self.item.take().unwrap()
     }
 }
 

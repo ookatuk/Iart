@@ -64,7 +64,18 @@ where
     fn from_residual(residual: Result<Infallible, E>) -> Self {
         let err = unsafe { residual.unwrap_err_unchecked() };
 
-        Self::new_err(err, None)
+        let alloc = residual.allocator.clone();
+        residual.handled = true;
+        Self {
+            data: residual.data.take().map(|d| Err(d.unwrap_err())),
+            handled: false,
+            #[cfg(feature = "allow-backtrace-logging")]
+            log: residual.log.take(),
+            trans_fns: residual.trans_fns.clone(),
+            item: None,
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: residual.tracking_id,
+        }
     }
 }
 
@@ -77,7 +88,18 @@ where
     fn from_residual(residual: Result<Infallible, &'static E>) -> Self {
         let err = unsafe { residual.unwrap_err_unchecked() };
 
-        Self::new_err(err, None)
+        let alloc = residual.allocator.clone();
+        residual.handled = true;
+        Self {
+            data: residual.data.take().map(|d| Err(d.unwrap_err())),
+            handled: false,
+            #[cfg(feature = "allow-backtrace-logging")]
+            log: residual.log.take(),
+            trans_fns: residual.trans_fns.clone(),
+            item: None,
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: residual.tracking_id,
+        }
     }
 }
 

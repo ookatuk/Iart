@@ -165,6 +165,9 @@ mod non_api_impl {
 
         #[doc = include_str!("../doc/variable/global/trans_fns.md")]
         pub(crate) trans_fns: Option<Trans>,
+
+        #[cfg(feature = "enable-pending-tracker")]
+        pub(crate) tracking_id: Option<usize>,
     }
 }
 
@@ -253,6 +256,9 @@ mod api_impl {
 
         #[doc = include_str!("../doc/variable/global/trans_fns.md")]
         pub(crate) trans_fns: Option<Trans<A>>,
+
+        #[cfg(feature = "enable-pending-tracker")]
+        pub(crate) tracking_id: Option<usize>,
     }
 }
 

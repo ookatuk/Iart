@@ -16,6 +16,12 @@ pub const fn cold_path() {}
 #[cfg(feature = "for-nightly-likely-optimization")]
 pub use core::hint::{cold_path, unlikely};
 
+#[cfg(feature = "enable-pending-tracker")]
+use crate::{RESULT_TRACK_MAX, TRACKER};
+#[cfg(feature = "enable-pending-tracker")]
+use core::panic::Location;
+#[cfg(feature = "enable-pending-tracker")]
+use core::sync::atomic::{AtomicUsize, Ordering};
 #[allow(unused)]
 #[doc = include_str!("../doc/fn/const_str_to_usize.md")]
 pub const fn const_str_to_usize(s: &str) -> usize {
@@ -153,4 +159,64 @@ pub const fn str_eq(a: &str, b: &str) -> bool {
         i += 1;
     }
     true
+}
+
+#[cfg(all(feature = "enable-pending-tracker"))]
+const OFFSET_MAX: usize = 4; // TODO: DOC
+
+#[cfg(all(feature = "enable-pending-tracker"))]
+pub fn add_to_tracker(data: &'static Location<'static>) -> Option<usize> {
+    // TODO: DOC
+    static OFFSET: AtomicUsize = AtomicUsize::new(0);
+
+    const ODD_TARGET: usize = if OFFSET_MAX > RESULT_TRACK_MAX {
+        RESULT_TRACK_MAX
+    } else {
+        OFFSET_MAX
+    };
+
+    let mut target = OFFSET.fetch_add(1, Ordering::Relaxed) % ODD_TARGET;
+
+    for _ in 0..ODD_TARGET {
+        let res = TRACKER
+            .iter()
+            .enumerate()
+            .skip(target)
+            .step_by(ODD_TARGET)
+            .find_map(|(index, mutex)| {
+                let mut lock = mutex.try_lock()?;
+                if lock.is_some() {
+                    return None;
+                }
+                *lock = Some([data; 2]);
+                Some(index)
+            });
+
+        if let Some(index) = res {
+            return Some(index);
+        }
+
+        target = (target + 1) % ODD_TARGET;
+        OFFSET.fetch_add(1, Ordering::Relaxed);
+    }
+
+    None
+}
+
+#[cfg(all(feature = "enable-pending-tracker"))]
+#[inline]
+pub fn update_to_tracker(index: Option<usize>, data: &'static Location<'static>) {
+    // TODO: DOC
+    if let Some(index) = index {
+        TRACKER[index].lock().unwrap()[1] = data;
+    }
+}
+
+#[cfg(all(feature = "enable-pending-tracker"))]
+#[inline]
+pub fn remove_to_tracker(index: Option<usize>) {
+    // TODO: DOC
+    if let Some(index) = index {
+        *TRACKER[index].lock() = None;
+    }
 }

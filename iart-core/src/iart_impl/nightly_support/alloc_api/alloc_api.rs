@@ -178,6 +178,8 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             },
             trans_fns: None,
             item: Some(item),
+            #[cfg(feature = "enable-pending-tracker")]
+            trans_fns: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
@@ -210,6 +212,8 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             },
             trans_fns: Some(to_any),
             item: None,
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
@@ -246,6 +250,8 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                 },
                 trans_fns: Some(to_any),
                 item: None,
+                #[cfg(feature = "enable-pending-tracker")]
+                tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
             }
         };
 
@@ -472,6 +478,9 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/send_log.md")]
     pub fn send_log(&mut self) {
+        #[cfg(feature = "enable-pending-tracker")]
+        crate::utils::update_to_tracker(self.tracking_id, Location::caller());
+
         #[cfg(feature = "allow-backtrace-logging")]
         {
             if self.data.as_ref().map_or(false, |r| r.is_err()) {
@@ -541,6 +550,8 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             log: self.log.take(),
             trans_fns: self.trans_fns.take(),
             allocator: self.allocator.clone(),
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: self.tracking_id.take(),
         };
 
         self.handled = true;
@@ -551,11 +562,13 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[inline]
     #[doc = include_str!("../../../../doc/fn/Iart/map.md")]
-    pub fn map<F, NewItem: 'static>(self, fns: F) -> Iart<NewItem, A>
+    pub fn map<F, NewItem: 'static>(mut self, fns: F) -> Iart<NewItem, A>
     where
         F: FnOnce(Item) -> NewItem,
         A: Default + Send + Sync + 'static,
     {
+        self.send_log();
+
         self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Map))
             .unwrap();
 
@@ -593,6 +606,8 @@ impl<T, A: alloc::alloc::Allocator + Clone + 'static + Default> Default for Iart
             allocator: alloc,
             item: None,
             trans_fns: Some(jen_fns!(DummyErr, A)),
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 }

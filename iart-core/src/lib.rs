@@ -26,6 +26,12 @@ mod iart_impl;
 mod tests;
 mod types;
 
+#[cfg(all(feature = "enable-pending-tracker", feature = "alloc"))]
+use alloc::vec::Vec;
+#[cfg(feature = "enable-pending-tracker")]
+use core::panic::Location;
+#[cfg(all(feature = "enable-pending-tracker", feature = "alloc"))]
+use spin::Lazy;
 pub use types::*;
 
 #[cfg(all(feature = "core_error-support", feature = "std"))]
@@ -38,6 +44,7 @@ compile_error!(
 use crate::events::IartEvent;
 use crate::utils::{const_str_to_usize, str_eq};
 use core::sync::atomic::{AtomicPtr, Ordering};
+use spin::Once;
 
 #[allow(unused)]
 pub const BACK_TRACE_MAX: usize = {
@@ -45,6 +52,15 @@ pub const BACK_TRACE_MAX: usize = {
         const_str_to_usize(val)
     } else {
         32
+    }
+};
+
+#[allow(unused)]
+pub const RESULT_TRACK_MAX: usize = {
+    if let Some(val) = option_env!("IART_TRACE_MAX") {
+        const_str_to_usize(val)
+    } else {
+        16
     }
 };
 
@@ -66,6 +82,7 @@ pub const TRACE_REMOVE_TYPE: &str = {
 #[doc = include_str!("../doc/variable/TRACE_UNIQUE.md")]
 pub const TRACE_UNIQUE: bool = !cfg!(feature = "no-trace-dedup");
 
+static HANDLER_CREATED: Once = Once::new();
 #[doc = include_str!("../doc/variable/HANDLER.md")]
 static HANDLER: AtomicPtr<()> = AtomicPtr::new(
     #[cfg(all(
@@ -88,16 +105,53 @@ static HANDLER: AtomicPtr<()> = AtomicPtr::new(
     core::ptr::null_mut(),
 );
 
+#[cfg(all(feature = "enable-pending-tracker", feature = "alloc"))]
+static TRACKER: Lazy<Vec<spin::Mutex<Option<[&'static Location<'static>; 2]>>>> = Lazy::new(|| {
+    (0..RESULT_TRACK_MAX)
+        .map(|_| spin::Mutex::new(None))
+        .collect()
+}); // TODO: DOC
+
+#[cfg(all(feature = "enable-pending-tracker", not(feature = "alloc")))]
+static TRACKER: [spin::Mutex<Option<[&'static Location<'static>; 2]>>] =
+    [spin::Mutex::new(None); RESULT_TRACK_MAX];
+
 #[inline]
 #[doc = include_str!("../doc/fn/set_handler.md")]
-pub fn set_handler(f: IartLogger) {
+pub fn set_handler(f: IartLogger) -> bool {
+    if HANDLER_CREATED.is_completed() {
+        return false;
+    }
+
+    HANDLER_CREATED.call_once(|| {});
     HANDLER.store(f as *mut (), Ordering::SeqCst);
+    true
 }
 
 #[inline]
 #[doc = include_str!("../doc/fn/is_initialized_handler.md")]
 pub fn is_initialized_handler() -> bool {
     !HANDLER.load(Ordering::Acquire).is_null()
+}
+
+#[inline]
+#[cfg(feature = "enable-pending-tracker")]
+pub fn get_current_tracking_data() -> &'static [spin::Mutex<Option<[&'static Location<'static>; 2]>>]
+{
+    // TODO: DOC
+    TRACKER.as_slice()
+}
+
+#[inline]
+#[cfg(feature = "enable-pending-tracker")]
+pub fn found_pending_data() -> bool {
+    // TODO: DOC
+    for i in TRACKER.iter() {
+        if i.lock().is_some() {
+            return true;
+        }
+    }
+    false
 }
 
 #[doc = include_str!("../doc/fn/default_handler.md")]

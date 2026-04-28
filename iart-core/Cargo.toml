@@ -13,9 +13,7 @@ categories.workspace = true
 
 [dependencies]
 core-error = { version = "^0.0", default-features = false, optional = true }
-
-[dev-dependencies]
-spin.workspace = true
+spin = { version = "^0.10", default-features = false, features = ["once"] }
 
 [features]
 default = ["std", "allow-backtrace-logging", "check-unused-result", "enable-default-handler"]
@@ -26,6 +24,8 @@ for-nightly-likely-optimization = []
 for-nightly-error-generic-member-access = []
 for-nightly-try-support = []
 for-nightly-allocator-api-support = ["alloc"]
+
+enable-pending-tracker = ["alloc", "spin/mutex", "spin/spin_mutex"]
 
 no-trace-dedup = []
 
@@ -40,3 +40,6 @@ core_error-support = ["core-error"]
 enable-default-handler = ["std"]
 
 alloc = []
+
+[dev-dependencies]
+spin = { version = "^0.10" }

@@ -520,3 +520,9 @@ fn to_result() {
         .error_data
         .unwrap();
 }
+
+#[test]
+#[cfg(feature = "enable-pending-tracker")]
+fn tracker() {
+    let data = Iart::new_ok("hi!");
+}

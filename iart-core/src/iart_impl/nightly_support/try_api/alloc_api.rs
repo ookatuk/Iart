@@ -51,6 +51,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static + Default + Send + Sync 
     fn from_residual(mut residual: Iart<Infallible, A>) -> Self {
         let alloc = residual.allocator.clone();
         residual.handled = true;
+
         Self {
             data: residual.data.take().map(|d| Err(d.unwrap_err())),
             handled: false,
@@ -59,6 +60,8 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static + Default + Send + Sync 
             allocator: alloc,
             trans_fns: residual.trans_fns.clone(),
             item: None,
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: residual.tracking_id,
         }
     }
 }

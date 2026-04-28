@@ -174,6 +174,8 @@ impl<Item> Iart<Item> {
             },
             trans_fns: None,
             item: Some(item),
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
@@ -197,6 +199,8 @@ impl<Item> Iart<Item> {
             },
             trans_fns: None,
             item: Some(item),
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
@@ -226,6 +230,8 @@ impl<Item> Iart<Item> {
             },
             item: None,
             trans_fns: Some(to_any),
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
@@ -254,6 +260,8 @@ impl<Item> Iart<Item> {
             },
             item: None,
             trans_fns: Some(to_any),
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
@@ -282,6 +290,8 @@ impl<Item> Iart<Item> {
             },
             item: None,
             trans_fns: Some(to_any),
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
@@ -441,6 +451,9 @@ impl<Item> Iart<Item> {
     #[doc = include_str!("../../../../doc/fn/Iart/send_log.md")]
     #[cfg(feature = "alloc")]
     pub fn send_log(&mut self) {
+        #[cfg(feature = "enable-pending-tracker")]
+        crate::utils::update_to_tracker(self.tracking_id, Location::caller());
+
         #[cfg(feature = "allow-backtrace-logging")]
         {
             if self.data.as_ref().map_or(false, |r| r.is_err()) {
@@ -588,12 +601,15 @@ impl<Item> Iart<Item> {
     #[allow(rustdoc::broken_intra_doc_links)] // Because it should be correct but produces an error.
     #[doc = include_str!("../../../../doc/fn/Iart/map.md")]
     #[inline]
-    pub fn map<F, NewItem>(self, fns: F) -> Iart<NewItem>
+    pub fn map<F, NewItem>(mut self, fns: F) -> Iart<NewItem>
     where
         F: FnOnce(Item) -> NewItem,
     {
+        self.send_log();
+
         self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Map))
             .unwrap();
+
         self.internal_map(fns)
     }
 
@@ -612,6 +628,8 @@ impl<Item> Iart<Item> {
             #[cfg(feature = "allow-backtrace-logging")]
             log: self.log.take(),
             trans_fns: self.trans_fns.take(),
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: self.tracking_id.take(),
         };
 
         self.handled = true;
@@ -646,6 +664,8 @@ impl<T> Default for Iart<T> {
             },
             trans_fns: Some(jen_fns!(DummyErr)),
             item: None,
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
@@ -662,6 +682,8 @@ impl<T> Default for Iart<T> {
             },
             trans_fns: Some(jen_fns!(DummyErr)),
             item: None,
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 }
