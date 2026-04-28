@@ -441,7 +441,7 @@ impl<Item> Iart<Item> {
 
         self.send_log();
 
-        self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Unwrap))
+        self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::UnwrapUnchecked))
             .unwrap();
 
         unsafe { self.item.take().unwrap_unchecked() }

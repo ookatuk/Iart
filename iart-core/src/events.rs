@@ -16,6 +16,7 @@ pub enum AutoRequestType {
     ToResult,
     ToResultFail,
     Map,
+    UnwrapUnchecked,
 }
 
 #[non_exhaustive]

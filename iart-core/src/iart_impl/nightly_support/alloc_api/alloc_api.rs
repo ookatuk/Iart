@@ -408,8 +408,10 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         self.send_log();
 
         unsafe {
-            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Unwrap))
-                .unwrap_unchecked()
+            self.send_log_to_handler::<true>(IartEvent::FunctionHook(
+                AutoRequestType::UnwrapUnchecked,
+            ))
+            .unwrap_unchecked()
         };
 
         unsafe { self.item.take().unwrap_unchecked() }
