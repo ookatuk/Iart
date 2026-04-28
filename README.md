@@ -457,6 +457,9 @@ A:
 Q: What changed from 1.0 to 2.0?
 
 A:
+> I think it's designed to reduce the amount.
 > 1. `Err()`, `Ok()`, `Err_string()`, etc., have been renamed to `new_err`, `new_ok`, `new_string_err`, etc.
 > 2. `Err_string_item` and `Err_item` have been changed to builder patterns such as `new_err(...).with_item` and `new_string_err(...).with_item`.
 > 3. `spin` has been changed from `dev-dependencies` to `dependencies`. (Currently, this only applies to `spin-mutex`, `once`, and `mutex`.)
+> 4. Some of the return values have been changed to structures.
+> 5. Also, please note that the types of return values ​​for `err` and `unwrap_err` have changed.
