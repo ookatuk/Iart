@@ -137,7 +137,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
 
     #[inline]
     #[allow(non_snake_case)]
-    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Ok.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_ok.md")]
     pub fn new_ok(item: Item) -> Iart<Item, A>
     where
         A: Default,
@@ -149,7 +149,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Err.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_err.md")]
     pub fn new_err<ERR: IartErr<A> + Send + Sync + 'static>(
         error: ERR,
         desc: impl Into<Option<&'static str>>,
@@ -161,7 +161,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     }
 
     #[allow(non_snake_case)]
-    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Ok_in.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_ok_in.md")]
     #[inline]
     pub fn new_ok_in(item: Item, allocator: A) -> Iart<Item, A> {
         Iart::<Item, A> {
@@ -186,7 +186,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Err_in.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_err_in.md")]
     pub fn new_err_in<ERR: IartErr<A> + Send + Sync + 'static>(
         error: ERR,
         desc: impl Into<Option<&'static str>>,
@@ -220,7 +220,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Err_string_in.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_string_err_in.md")]
     pub fn new_string_err_in<ERR>(
         error: ERR,
         desc: impl Into<Option<String>>,
@@ -262,7 +262,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Err_string.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_string_err.md")]
     pub fn new_string_err<ERR: IartErr<A> + Send + Sync + 'static>(
         error: ERR,
         desc: impl Into<Option<String>>,

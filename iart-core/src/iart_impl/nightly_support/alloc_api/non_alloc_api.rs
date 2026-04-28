@@ -159,7 +159,7 @@ impl<Item> Iart<Item> {
     #[inline]
     #[allow(non_snake_case)]
     #[cfg(feature = "alloc")]
-    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Ok.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/new_ok.md")]
     pub fn new_ok(item: Item) -> Self {
         Self {
             data: Some(Ok(())),
@@ -182,7 +182,7 @@ impl<Item> Iart<Item> {
     #[inline]
     #[allow(non_snake_case)]
     #[cfg(not(feature = "alloc"))]
-    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Ok.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/new_ok.md")]
     pub fn new_ok(item: Item) -> Self {
         Self {
             data: Some(Ok(())),
@@ -208,7 +208,7 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/new_err.md")]
     #[cfg(feature = "alloc")]
     pub fn new_err<ERR: IartErr + 'static>(
         error: ERR,
@@ -239,7 +239,7 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/new_err.md")]
     #[cfg(not(feature = "alloc"))]
     pub fn new_err<ERR: IartErr + 'static>(
         error: &'static ERR,
@@ -269,7 +269,7 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
-    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Err_string.md")]
+    #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/new_string_err.md")]
     #[cfg(feature = "alloc")]
     pub fn new_string_err<ERR: IartErr + 'static>(
         error: ERR,

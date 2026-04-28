@@ -56,6 +56,7 @@ pub const BACK_TRACE_MAX: usize = {
 };
 
 #[allow(unused)]
+#[cfg(feature = "enable-pending-tracker")]
 pub const RESULT_TRACK_MAX: usize = {
     if let Some(val) = option_env!("IART_TRACE_MAX") {
         const_str_to_usize(val)
