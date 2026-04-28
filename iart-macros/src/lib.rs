@@ -24,7 +24,8 @@ pub fn iart_open_no_log(input: TokenStream) -> TokenStream {
                         iart.__internal_take_log(),
                         iart.__internal_get_trans_fns(),
                         iart.__internal_take_err_item(),
-                        iart.__internal_get_allocator()
+                        iart.__internal_get_allocator(),
+                        iart.__internal_take_track_id(),
                     )};
                 }
                 None => panic!("Iart: consumed data in iart_open_no_log"),
