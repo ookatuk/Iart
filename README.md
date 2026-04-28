@@ -10,19 +10,17 @@
 a structure inspired by [`Result`], designed for `std` and `no-std`.
 supporting event-driven handling and dynamic tracing.
 
-> Incidentally, I took a library I was already using personally, turned it into a crate, added features, and stabilized
-> the specifications at the time of the initial release.
->
-> If we were to change the specifications, it would be in version 1.0 or 2.0.
+> While disruptive updates are possible, we intend to provide bug fix support for older versions for a certain period if they still have a significant user base.
+> 
+> However, since bug fixes may be discontinued without notice, we recommend checking the `README.md` file and updating as soon as possible.
 
 ## Features
 
 1. **Event Notification**: Automatically notifies handlers when error-handling methods are executed.
-2. **`no-std` Tracing**: Lightweight and simple execution tracing that works in embedded environments.
+2. **`no-std` and `no-alloc` Tracing**: Lightweight and simple execution tracing that works in embedded environments.
 3. **Usage Validation**: Issues warnings if the result is not handled properly (goes beyond simple `is_err` checks).
 4. **works on `stable` Rust**: See the `Nightly build only?` section.
-
-Perfect for projects expecting no-std support!
+5. **High utility for `std` projects**: Beyond just no-std, it provides unique safety nets—like passing unused errors to custom handlers—that you won't find in standard error-handling crates.
 
 Except for the default handler,
 functionality with no-std is not restricted!
@@ -33,6 +31,7 @@ functionality with no-std is not restricted!
 use iart::prelude::Iart;
 use iart::prelude::DummyErr;
 use iart::prelude::ErrorDetail;
+use iart::prelude::ToResultRet;
 use iart::iart_try;
 use core::panic::Location;
 
@@ -41,12 +40,12 @@ use std::collections::VecDeque;
 
 fn main() {
     // 1. Success
-    let res = Iart::Ok("hi");
+    let res = Iart::new_ok("hi");
 
     // 2. Errors with diagnostic messages
     // Use `Err` for static messages or `Err_string` for dynamic ones (like `format!`).
-    let res_err1: Iart<i32> = Iart::Err(DummyErr {}, "Static error message"); // **NOT Enum! This is function!**
-    let res_err2: Iart<u32> = Iart::Err_string(DummyErr {}, format!("Dynamic error: {}", 404));
+    let res_err1: Iart<i32> = Iart::new_err(DummyErr {}, "Static error message");
+    let res_err2: Iart<u32> = Iart::new_string_err(DummyErr {}, format!("Dynamic error: {}", 404));
 
     // or Iart<u32> = Iart::Err_item(DummyErr{}, "test", 56); // `error-can-have-item`
 
@@ -60,14 +59,14 @@ fn main() {
     // if you need downcast, use [`Iart::try_downcast`]
 
     fn test() -> Iart<u32> { // Try is not supported by default, but if you want to use it...
-        let result: Iart<u32> = Iart::Ok(5);
+        let result: Iart<u32> = Iart::new_ok(5);
 
         // in nightly build,
         // result? is supported(`for-nightly-try-support` feature)
 
         let res: u32 = iart_try!(result); // for stable build
         // or `iart_open_no_log!` (can use in all build)
-        Iart::Ok(res)
+        Iart::new_ok(res)
     }
 
     let res = test().unwrap();
@@ -78,7 +77,7 @@ fn main() {
     // Conversely, it is marked `unsafe` precisely because [`iart_core::ErrorDetail::new`] results in UB if given invalid values.
     //
     // Besides, why should we even need to account for manual tampering with [`iart_core::ErrorDetail::new`]?
-    let res: Result<(Result<(), (DummyErr, Box<ErrorDetail>)>, Option<u32>, Option<VecDeque<&'static Location<'static>>>), Iart<u32>> = unsafe { test().to_result() }; // can this!
+    let res: Result<ToResultRet<DummyErr, u32>, Iart<u32>> = unsafe { test().to_result() }; // can this!
 
     // This can be done even under normal circumstances.
     res_err1.for_each_log(|log: &'static Location<'static>| -> bool {
@@ -211,7 +210,7 @@ fn handler(event: IartEvent, iart: IartHandleDetails) -> core::fmt::Result {
 }
 
 fn main() {
-    set_handler(handler); // It will be stored atomically.
+    assert_eq!(set_handler(handler), true); // It will be stored atomically.
     // and optional
     // if you need default handler, enable `enable-default-handler`
     // ...
@@ -281,11 +280,6 @@ A:
 
 `danger-allow-panic-if-unused` - If unused is detected, `panic!` will be executed after the handler has finished processing.
 
-`error-can-have-item`
-> `Err_item`, `Err_item_option`, etc., will be added.
-> Please note that these will be passed in a special format.
-> For example, in the case of the `err` method, it is passed as the second tuple.
-
 `core_error-support`
 > It cannot coexist with `std` Because,
 > `core_error::Error` becomes `std::error::Error`
@@ -304,6 +298,32 @@ A:
 
 `alloc`
 > Supports Box instead of static references.
+
+`enable-pending-tracker`
+> For those in situations where `Drop` cannot detect them, this is probably good news.
+> This feature allows you to retrieve currently unprocessed IARTs.
+> 
+> You're probably thinking there must be a better way, right?
+>
+> This is all I could come up with after two days.
+>
+> Please forgive me.
+
+# Deleted features
+`error-can-have-item`
+> It has been integrated into the main program.
+> 
+> It can be used with `new_err(...).with_item`.
+> 
+> Several related functions have also been modified.
+> 
+> old description: 
+> ```
+> `Err_item`, `Err_item_option`, etc., will be added.
+> Please note that these will be passed in a special format.
+> For example, in the case of the `err` method, it is passed as the second tuple.
+> ```
+
 
 # How to install?
 `cargo add iart`
@@ -377,7 +397,7 @@ Q: I'm scared of macro dependencies.
 
 A: You can either acquire the `regex` skill or try using the following code:
 
-```ingnore
+```rust,ignore
 let res = match xxx.is_ok() {
     Ok(item) => {
     res
@@ -414,4 +434,29 @@ A:
 > additions (and had them merged) in languages ​​other than Rust.
 >
 > If you're interested in Rust(and memory safety),
-> you can see it in the code of my projects(pined). (My documentation might make you doubt my abilities, though.)
+> you can see it in the code of my projects(pinned). (My documentation might make you doubt my abilities, though.)
+
+Q: LTS?
+
+A:
+> I intend to create it if it is used by many people or if there is a request.
+> 
+> However, for updates like this one (1.x -> 2.x), I intend to continue supporting fixes for older versions for a certain period of time.
+
+Q: Why did you update to 2.0 when you explicitly said you wouldn't?
+
+A:
+> Yes...well, I felt there were more problems than I expected, especially serious issues like `Err` not being an `enum`.
+> 
+> After refactoring those issues, this is the result of my plan.
+> 
+> I'm certainly reflecting on this myself, so although 1.x is not an LTS (Long-Term Support) version, I intend to only make fixes without API changes for a long period of time (though this is undecided).
+>
+> That said, if 2.0 still proves to be problematic, I might have to take the same approach again (by moving to a new major version or providing similar long-term fixes). I'll handle it as the situation demands.
+
+Q: What changed from 1.0 to 2.0?
+
+A:
+> 1. `Err()`, `Ok()`, `Err_string()`, etc., have been renamed to `new_err`, `new_ok`, `new_string_err`, etc.
+> 2. `Err_string_item` and `Err_item` have been changed to builder patterns such as `new_err(...).with_item` and `new_string_err(...).with_item`.
+> 3. `spin` has been changed from `dev-dependencies` to `dependencies`. (Currently, this only applies to `spin-mutex`, `once`, and `mutex`.)

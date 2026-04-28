@@ -2,8 +2,9 @@
 
 ## Supported Versions
 
-* 2.0.x: Supported
-* Others: Not supported
+* 2.x.x: Add feature (not LTS)
+* 1.1.x: Fix only(not LTS)
+* Others(0.x~): Not supported
 
 ## Vulnerability Reporting
 Please contact the developer via email (my profile), GitHub's `Private vulnerability reporting`, or Discord (my profile).
