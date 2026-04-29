@@ -31,6 +31,7 @@ for-nightly-try-support = ["iart-core/for-nightly-try-support", "iart-macros/for
 for-nightly-error-generic-member-access = ["iart-core/for-nightly-error-generic-member-access"]
 
 enable-pending-tracker = ["iart-core/enable-pending-tracker"]
+enable-pending-tracker-tracking-count = ["iart-core/enable-pending-tracker-tracking-count"]
 
 no-trace-dedup = ["iart-core/no-trace-dedup"]
 

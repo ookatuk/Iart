@@ -7,7 +7,7 @@ impl<T, A: Clone + alloc::alloc::Allocator> Drop for Iart<T, A> {
     #[doc = include_str!("../../../doc/fn/Iart/drop.md")]
     fn drop(&mut self) {
         #[cfg(feature = "enable-pending-tracker")]
-        crate::utils::remove_to_tracker(self.tracking_id);
+        crate::utils::remove_from_tracker(self.tracking_id);
 
         #[cfg(feature = "std")]
         if std::thread::panicking() {

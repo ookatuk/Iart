@@ -1,0 +1,1 @@
+A constant that defines the maximum offset used for distribution when adding a tracker.

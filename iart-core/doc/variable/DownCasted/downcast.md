@@ -1,0 +1,1 @@
+A class variable that stores downcast errors.

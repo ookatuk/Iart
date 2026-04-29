@@ -524,5 +524,37 @@ fn to_result() {
 #[test]
 #[cfg(feature = "enable-pending-tracker")]
 fn tracker() {
-    let data = Iart::new_ok("hi!");
+    let _guard = TEST_LOG_LOCK.lock();
+
+    assert_eq!(crate::is_found_pending_data(), false);
+
+    let res = Iart::new_ok("hi!");
+
+    assert_eq!(crate::is_found_pending_data(), true);
+
+    let data = crate::get_current_tracking_data();
+
+    let mut found = false;
+
+    for i in data.iter() {
+        let lock = i.lock();
+        if let Some(_) = lock.as_ref() {
+            found = true;
+        }
+    }
+
+    assert_eq!(found, true);
+    let _ = res.unwrap();
+    assert_eq!(crate::is_found_pending_data(), false);
+
+    found = false;
+
+    for i in data.iter() {
+        let lock = i.lock();
+        if let Some(_) = lock.as_ref() {
+            found = true;
+        }
+    }
+
+    assert_eq!(found, false);
 }

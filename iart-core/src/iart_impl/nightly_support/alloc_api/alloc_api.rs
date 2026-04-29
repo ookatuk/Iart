@@ -136,9 +136,9 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     }
 
     #[inline]
-    #[allow(non_snake_case)]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_ok.md")]
-    pub fn new_ok(item: Item) -> Iart<Item, A>
+    #[track_caller]
+    pub fn new_ok(item: impl Into<Item>) -> Iart<Item, A>
     where
         A: Default,
     {
@@ -146,7 +146,6 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     }
 
     #[inline]
-    #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_err.md")]
@@ -160,10 +159,10 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         Iart::<Item, A>::new_err_in(error, desc, A::default())
     }
 
-    #[allow(non_snake_case)]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_ok_in.md")]
     #[inline]
-    pub fn new_ok_in(item: Item, allocator: A) -> Iart<Item, A> {
+    #[track_caller]
+    pub fn new_ok_in(item: impl Into<Item>, allocator: A) -> Iart<Item, A> {
         Iart::<Item, A> {
             data: Some(Ok(())),
             handled: false,
@@ -177,13 +176,12 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                 Some(log)
             },
             trans_fns: None,
-            item: Some(item),
+            item: Some(item.into()),
             #[cfg(feature = "enable-pending-tracker")]
             trans_fns: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
-    #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_err_in.md")]
@@ -217,7 +215,6 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         }
     }
 
-    #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_string_err_in.md")]
@@ -259,7 +256,6 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     }
 
     #[inline]
-    #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/new_string_err.md")]
@@ -450,7 +446,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/from_option_in.md")]
     pub fn from_option_in<ERR: IartErr<A> + Send + Sync + 'static>(
-        data: Option<Item>,
+        data: Option<impl Into<Item>>,
         e_type: ERR,
         detail: impl Into<Option<&'static str>>,
         allocator: A,

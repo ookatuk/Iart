@@ -1,0 +1,1 @@
+A structure used as the return value on success for downcasting methods such as [`Iart::try_downcast`].

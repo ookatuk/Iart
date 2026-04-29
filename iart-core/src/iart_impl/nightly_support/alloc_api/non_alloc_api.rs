@@ -157,10 +157,10 @@ impl<Item> Iart<Item> {
     }
 
     #[inline]
-    #[allow(non_snake_case)]
     #[cfg(feature = "alloc")]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/new_ok.md")]
-    pub fn new_ok(item: Item) -> Self {
+    #[track_caller]
+    pub fn new_ok(item: impl Into<Item>) -> Self {
         Self {
             data: Some(Ok(())),
             handled: false,
@@ -173,17 +173,17 @@ impl<Item> Iart<Item> {
                 Some(log)
             },
             trans_fns: None,
-            item: Some(item),
+            item: Some(item.into()),
             #[cfg(feature = "enable-pending-tracker")]
             tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
     #[inline]
-    #[allow(non_snake_case)]
     #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/new_ok.md")]
-    pub fn new_ok(item: Item) -> Self {
+    #[track_caller]
+    pub fn new_ok(item: impl Into<Item>) -> Self {
         Self {
             data: Some(Ok(())),
             handled: false,
@@ -198,14 +198,13 @@ impl<Item> Iart<Item> {
                 Some(log)
             },
             trans_fns: None,
-            item: Some(item),
+            item: Some(item.into()),
             #[cfg(feature = "enable-pending-tracker")]
             tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
     #[inline]
-    #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/new_err.md")]
@@ -236,7 +235,6 @@ impl<Item> Iart<Item> {
     }
 
     #[inline]
-    #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/new_err.md")]
@@ -266,7 +264,6 @@ impl<Item> Iart<Item> {
     }
 
     #[inline]
-    #[allow(non_snake_case)]
     #[track_caller]
     #[cold]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/new_string_err.md")]
@@ -555,7 +552,7 @@ impl<Item> Iart<Item> {
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/from_option.md")]
     #[cfg(feature = "alloc")]
     pub fn from_option<ERR: IartErr + 'static>(
-        data: Option<Item>,
+        data: Option<impl Into<Item>>,
         e_type: ERR,
         detail: impl Into<Option<&'static str>>,
     ) -> Self {
@@ -572,7 +569,7 @@ impl<Item> Iart<Item> {
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/from_option.md")]
     #[cfg(not(feature = "alloc"))]
     pub fn from_option<ERR: IartErr + 'static>(
-        data: Option<Item>,
+        data: Option<impl Into<Item>>,
         e_type: &'static ERR,
         detail: impl Into<Option<&'static str>>,
     ) -> Self {

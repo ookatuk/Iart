@@ -1,4 +1,4 @@
-This is a reference to the [`VecDeque`] where the trace is being recorded.
+Trace is being recorded [`VecDeque`] or `slice`
 
 If the ability to record traces is disabled when OK,
 or if ownership of `log` has already been taken,

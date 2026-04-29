@@ -1,0 +1,1 @@
+The return value of the [`Iart::to_result`] function.

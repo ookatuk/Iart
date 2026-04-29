@@ -42,40 +42,28 @@ compile_error!(
 
 #[cfg(all(feature = "std", feature = "enable-default-handler"))]
 use crate::events::IartEvent;
+
+#[cfg(feature = "enable-pending-tracker-tracking-count")]
+use core::sync::atomic::AtomicUsize;
+
 use crate::utils::{const_str_to_usize, str_eq};
 use core::sync::atomic::{AtomicPtr, Ordering};
 use spin::Once;
 
 #[allow(unused)]
-pub const BACK_TRACE_MAX: usize = {
-    if let Some(val) = option_env!("IART_TRACE_MAX") {
-        const_str_to_usize(val)
-    } else {
-        32
-    }
-};
-
+pub const BACK_TRACE_MAX: usize = const_str_to_usize(env!("IART_TRACE_MAX"));
 #[allow(unused)]
 #[cfg(feature = "enable-pending-tracker")]
-pub const RESULT_TRACK_MAX: usize = {
-    if let Some(val) = option_env!("IART_TRACE_MAX") {
-        const_str_to_usize(val)
-    } else {
-        16
-    }
-};
+pub const RESULT_TRACK_MAX: usize = const_str_to_usize(env!("IART_TRACE_MAX"));
 
 #[allow(unused)]
 #[doc = include_str!("../doc/variable/TRACE_REMOVE_TYPE.md")]
 pub const TRACE_REMOVE_TYPE: &str = {
-    if let Some(s) = option_env!("IART_TRACE_TYPE") {
-        if str_eq(s, "good") || str_eq(s, "first") || str_eq(s, "last") {
-            s
-        } else {
-            panic!("Invalid IART_TRACE_TYPE!");
-        }
+    let s = env!("IART_TRACE_TYPE");
+    if str_eq(s, "good") || str_eq(s, "first") || str_eq(s, "last") {
+        s
     } else {
-        "good"
+        panic!("Invalid IART_TRACE_TYPE!");
     }
 };
 
@@ -83,7 +71,9 @@ pub const TRACE_REMOVE_TYPE: &str = {
 #[doc = include_str!("../doc/variable/TRACE_UNIQUE.md")]
 pub const TRACE_UNIQUE: bool = !cfg!(feature = "no-trace-dedup");
 
+#[doc = include_str!("../doc/variable/HANDLER_CREATED.md")]
 static HANDLER_CREATED: Once = Once::new();
+
 #[doc = include_str!("../doc/variable/HANDLER.md")]
 static HANDLER: AtomicPtr<()> = AtomicPtr::new(
     #[cfg(all(
@@ -107,15 +97,25 @@ static HANDLER: AtomicPtr<()> = AtomicPtr::new(
 );
 
 #[cfg(all(feature = "enable-pending-tracker", feature = "alloc"))]
+#[doc = include_str!("../doc/variable/TRACKER.md")]
 static TRACKER: Lazy<Vec<spin::Mutex<Option<[&'static Location<'static>; 2]>>>> = Lazy::new(|| {
     (0..RESULT_TRACK_MAX)
         .map(|_| spin::Mutex::new(None))
         .collect()
-}); // TODO: DOC
+});
 
 #[cfg(all(feature = "enable-pending-tracker", not(feature = "alloc")))]
+#[doc = include_str!("../doc/variable/TRACKER.md")]
 static TRACKER: [spin::Mutex<Option<[&'static Location<'static>; 2]>>] =
     [spin::Mutex::new(None); RESULT_TRACK_MAX];
+
+#[cfg(feature = "enable-pending-tracker-tracking-count")]
+#[doc = include_str!("../doc/variable/TRACKING_COUNT.md")]
+static TRACKING_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+#[cfg(all(feature = "enable-pending-tracker"))]
+#[doc = include_str!("../doc/variable/TRACKER_MAX_OFFSET.md")]
+const TRACKER_MAX_OFFSET: usize = const_str_to_usize(env!("IART_TRACKER_MAX_OFFSET"));
 
 #[inline]
 #[doc = include_str!("../doc/fn/set_handler.md")]
@@ -137,22 +137,30 @@ pub fn is_initialized_handler() -> bool {
 
 #[inline]
 #[cfg(feature = "enable-pending-tracker")]
+#[doc = include_str!("../doc/fn/get_current_tracking_data.md")]
 pub fn get_current_tracking_data() -> &'static [spin::Mutex<Option<[&'static Location<'static>; 2]>>]
 {
-    // TODO: DOC
     TRACKER.as_slice()
 }
 
 #[inline]
 #[cfg(feature = "enable-pending-tracker")]
-pub fn found_pending_data() -> bool {
-    // TODO: DOC
-    for i in TRACKER.iter() {
-        if i.lock().is_some() {
-            return true;
+#[doc = include_str!("../doc/fn/is_found_pending_data.md")]
+pub fn is_found_pending_data() -> bool {
+    #[cfg(not(feature = "enable-pending-tracker-tracking-count"))]
+    let res = {
+        for i in TRACKER.iter() {
+            if i.lock().is_some() {
+                return true;
+            }
         }
-    }
-    false
+        false
+    };
+
+    #[cfg(feature = "enable-pending-tracker-tracking-count")]
+    let res = TRACKING_COUNT.load(Ordering::SeqCst) >= RESULT_TRACK_MAX;
+
+    res
 }
 
 #[doc = include_str!("../doc/fn/default_handler.md")]

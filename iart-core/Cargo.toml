@@ -26,6 +26,7 @@ for-nightly-try-support = []
 for-nightly-allocator-api-support = ["alloc"]
 
 enable-pending-tracker = ["alloc", "spin/mutex", "spin/spin_mutex"]
+enable-pending-tracker-tracking-count = ["enable-pending-tracker"]
 
 no-trace-dedup = []
 

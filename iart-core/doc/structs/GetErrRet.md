@@ -1,0 +1,1 @@
+The structure used as the return value for error retrieval functions such as [`Iart::err`] and [`Iart::unwrap_err`].

@@ -238,9 +238,9 @@ impl<Item> Iart<Item> {
     }
 
     #[inline]
-    pub fn with_item(mut self, item: Item) -> Self {
-        // TODO: doc
-        self.item = Some(item);
+    #[doc = include_str!("../../doc/fn/Iart/with_item.md")]
+    pub fn with_item(mut self, item: impl Into<Item>) -> Self {
+        self.item = Some(item.into());
 
         self
     }
@@ -248,14 +248,14 @@ impl<Item> Iart<Item> {
     #[doc(hidden)]
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_send_try_used.md")]
-    pub unsafe fn __internal_send_try_used(&self) -> core::fmt::Result {
+    pub fn __internal_send_try_used(&self) -> core::fmt::Result {
         self.send_log_to_handler::<false>(IartEvent::FunctionHook(TryUsed))
     }
 
     #[doc(hidden)]
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_take_data.md")]
-    pub unsafe fn __internal_take_data(&mut self) -> Option<Result<(), ErrorDetail>> {
+    pub fn __internal_take_data(&mut self) -> Option<Result<(), ErrorDetail>> {
         self.data.take()
     }
 
@@ -263,7 +263,7 @@ impl<Item> Iart<Item> {
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_take_log.md")]
     #[cfg(feature = "alloc")]
-    pub unsafe fn __internal_take_log(&mut self) -> Option<VecDeque<&'static Location<'static>>> {
+    pub fn __internal_take_log(&mut self) -> Option<VecDeque<&'static Location<'static>>> {
         #[cfg(feature = "allow-backtrace-logging")]
         let res = self.log.take();
         #[cfg(not(feature = "allow-backtrace-logging"))]
@@ -275,7 +275,7 @@ impl<Item> Iart<Item> {
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_take_log.md")]
     #[cfg(not(feature = "alloc"))]
-    pub unsafe fn __internal_take_log(
+    pub fn __internal_take_log(
         &mut self,
     ) -> Option<[Option<&'static Location<'static>>; BACK_TRACE_MAX]> {
         #[cfg(feature = "allow-backtrace-logging")]
@@ -295,7 +295,7 @@ impl<Item> Iart<Item> {
     #[doc(hidden)]
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_mark_handled.md")]
-    pub unsafe fn __internal_mark_handled(&mut self) {
+    pub fn __internal_mark_handled(&mut self) {
         self.handled = true;
     }
 
@@ -303,7 +303,7 @@ impl<Item> Iart<Item> {
     #[inline(always)]
     #[cfg(feature = "for-nightly-allocator-api-support")]
     #[doc = include_str!("../../doc/fn/Iart/__internal_get_allocator.md")]
-    pub unsafe fn __internal_get_allocator(&self) -> Option<alloc::alloc::Global> {
+    pub fn __internal_get_allocator(&self) -> Option<alloc::alloc::Global> {
         Some(self.allocator)
     }
 
@@ -311,14 +311,14 @@ impl<Item> Iart<Item> {
     #[inline(always)]
     #[cfg(not(feature = "for-nightly-allocator-api-support"))]
     #[doc = include_str!("../../doc/fn/Iart/__internal_get_allocator.md")]
-    pub unsafe fn __internal_get_allocator(&self) -> Option<u32> {
+    pub fn __internal_get_allocator(&self) -> Option<u32> {
         None
     }
 
     #[doc(hidden)]
     #[inline(always)]
-    pub unsafe fn __internal_take_track_id(&mut self) -> Option<usize> {
-        // TODO: DOC
+    #[doc = include_str!("../../doc/fn/Iart/__internal_take_track_id.md")]
+    pub fn __internal_take_track_id(&mut self) -> Option<usize> {
         #[cfg(feature = "enable-pending-tracker")]
         return self.tracking_id.take();
         #[cfg(not(feature = "enable-pending-tracker"))]
@@ -379,7 +379,7 @@ impl<Item> Iart<Item> {
     #[doc(hidden)]
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_take_item_unwrap.md")]
-    pub unsafe fn __internal_take_item_unwrap(&mut self) -> Item {
+    pub fn __internal_take_item_unwrap(&mut self) -> Item {
         self.item.take().unwrap()
     }
 }

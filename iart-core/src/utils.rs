@@ -17,7 +17,7 @@ pub const fn cold_path() {}
 pub use core::hint::{cold_path, unlikely};
 
 #[cfg(feature = "enable-pending-tracker")]
-use crate::{RESULT_TRACK_MAX, TRACKER};
+use crate::{RESULT_TRACK_MAX, TRACKER, TRACKER_MAX_OFFSET};
 #[cfg(feature = "enable-pending-tracker")]
 use core::panic::Location;
 #[cfg(feature = "enable-pending-tracker")]
@@ -162,18 +162,20 @@ pub const fn str_eq(a: &str, b: &str) -> bool {
 }
 
 #[cfg(all(feature = "enable-pending-tracker"))]
-const OFFSET_MAX: usize = 4; // TODO: DOC
-
-#[cfg(all(feature = "enable-pending-tracker"))]
+#[doc = include_str!("../doc/fn/add_to_tracker.md")]
 pub fn add_to_tracker(data: &'static Location<'static>) -> Option<usize> {
-    // TODO: DOC
     static OFFSET: AtomicUsize = AtomicUsize::new(0);
 
-    const ODD_TARGET: usize = if OFFSET_MAX > RESULT_TRACK_MAX {
+    const ODD_TARGET: usize = if TRACKER_MAX_OFFSET > RESULT_TRACK_MAX {
         RESULT_TRACK_MAX
     } else {
-        OFFSET_MAX
+        TRACKER_MAX_OFFSET
     };
+
+    #[cfg(feature = "enable-pending-tracker-tracking-count")]
+    if crate::TRACKING_COUNT.load(Ordering::Relaxed) >= RESULT_TRACK_MAX {
+        return None;
+    }
 
     let mut target = OFFSET.fetch_add(1, Ordering::Relaxed) % ODD_TARGET;
 
@@ -188,25 +190,32 @@ pub fn add_to_tracker(data: &'static Location<'static>) -> Option<usize> {
                 if lock.is_some() {
                     return None;
                 }
+
+                // If we put the logic inside the if let block, the data might be modified before we can re-lock the mutex.
+                // That's why we complete the update while the lock is still held inside the iterator.
+                // (Based on my original notes, translated to English by AI.)
                 *lock = Some([data; 2]);
                 Some(index)
             });
 
         if let Some(index) = res {
+            #[cfg(feature = "enable-pending-tracker-tracking-count")]
+            crate::TRACKING_COUNT.fetch_add(1, Ordering::Relaxed);
             return Some(index);
         }
 
         target = (target + 1) % ODD_TARGET;
         OFFSET.fetch_add(1, Ordering::Relaxed);
     }
+    cold_path();
 
     None
 }
 
 #[cfg(all(feature = "enable-pending-tracker"))]
 #[inline]
+#[doc = include_str!("../doc/fn/update_to_tracker.md")]
 pub fn update_to_tracker(index: Option<usize>, data: &'static Location<'static>) {
-    // TODO: DOC
     if let Some(index) = index {
         TRACKER[index].lock().unwrap()[1] = data;
     }
@@ -214,9 +223,11 @@ pub fn update_to_tracker(index: Option<usize>, data: &'static Location<'static>)
 
 #[cfg(all(feature = "enable-pending-tracker"))]
 #[inline]
-pub fn remove_to_tracker(index: Option<usize>) {
-    // TODO: DOC
+#[doc = include_str!("../doc/fn/remove_from_tracker.md")]
+pub fn remove_from_tracker(index: Option<usize>) {
     if let Some(index) = index {
+        #[cfg(feature = "enable-pending-tracker-tracking-count")]
+        crate::TRACKING_COUNT.fetch_sub(1, Ordering::Relaxed);
         *TRACKER[index].lock() = None;
     }
 }
