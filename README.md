@@ -236,7 +236,7 @@ A:
 >
 > As I've said many times,
 > 1. I check everything by reviewing it and running the code to make sure it's okay.
-> 2. The implementation does not use AI.(Except for tests/doc)
+> 2. The implementation does not use AI.(Except for tests/doc/comment)
 > 3. Even when using AI, we perform visual checks and verify the processing.
 > 4. Even if I were to use AI in my implementations in the future,
      > I would check the documentation for any unfamiliar functions before evaluating them.
