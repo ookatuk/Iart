@@ -159,6 +159,7 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[cfg(feature = "alloc")]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Ok.md")]
+    #[track_caller]
     pub fn Ok(item: Item) -> Self {
         Self {
             data: Some(Ok(item)),
@@ -181,6 +182,7 @@ impl<Item> Iart<Item> {
     #[allow(non_snake_case)]
     #[cfg(not(feature = "alloc"))]
     #[doc = include_str!("../../../../doc/fn/Iart/non_alloc_api/Ok.md")]
+    #[track_caller]
     pub fn Ok(item: Item) -> Self {
         Self {
             data: Some(Ok(item)),
