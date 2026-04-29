@@ -144,6 +144,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[inline]
     #[allow(non_snake_case)]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Ok.md")]
+    #[track_caller]
     pub fn Ok(item: Item) -> Iart<Item, A>
     where
         A: Default,
@@ -168,6 +169,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
 
     #[allow(non_snake_case)]
     #[doc = include_str!("../../../../doc/fn/Iart/alloc_api/Ok_in.md")]
+    #[track_caller]
     pub fn Ok_in(item: Item, allocator: A) -> Iart<Item, A> {
         #[cfg(not(feature = "allow-backtrace-logging"))]
         let res = Self {
