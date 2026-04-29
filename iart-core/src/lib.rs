@@ -54,7 +54,7 @@ use spin::Once;
 pub const BACK_TRACE_MAX: usize = const_str_to_usize(env!("IART_TRACE_MAX"));
 #[allow(unused)]
 #[cfg(feature = "enable-pending-tracker")]
-pub const RESULT_TRACK_MAX: usize = const_str_to_usize(env!("IART_TRACE_MAX"));
+pub const RESULT_TRACK_MAX: usize = const_str_to_usize(env!("IART_TRACK_MAX"));
 
 #[allow(unused)]
 #[doc = include_str!("../doc/variable/TRACE_REMOVE_TYPE.md")]
@@ -106,8 +106,8 @@ static TRACKER: Lazy<Vec<spin::Mutex<Option<[&'static Location<'static>; 2]>>>> 
 
 #[cfg(all(feature = "enable-pending-tracker", not(feature = "alloc")))]
 #[doc = include_str!("../doc/variable/TRACKER.md")]
-static TRACKER: [spin::Mutex<Option<[&'static Location<'static>; 2]>>] =
-    [spin::Mutex::new(None); RESULT_TRACK_MAX];
+static TRACKER: [spin::Mutex<Option<[&'static Location<'static>; 2]>>; RESULT_TRACK_MAX] =
+    [const { spin::Mutex::new(None) }; RESULT_TRACK_MAX];
 
 #[cfg(feature = "enable-pending-tracker-tracking-count")]
 #[doc = include_str!("../doc/variable/TRACKING_COUNT.md")]

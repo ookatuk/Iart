@@ -229,10 +229,10 @@ impl<Item> Iart<Item> {
             Some(item) => {
                 self.handled = true;
 
-                DownCasted {
+                Ok(DownCasted {
                     detail,
                     downcast: item,
-                }
+                })
             }
         }
     }
@@ -378,9 +378,9 @@ impl<Item> Iart<Item> {
 
     #[doc(hidden)]
     #[inline(always)]
-    #[doc = include_str!("../../doc/fn/Iart/__internal_take_item_unwrap.md")]
-    pub fn __internal_take_item_unwrap(&mut self) -> Item {
-        self.item.take().unwrap()
+    #[doc = include_str!("../../doc/fn/Iart/__internal_take_item.md")]
+    pub fn __internal_take_item(&mut self) -> Option<Item> {
+        self.item.take()
     }
 }
 

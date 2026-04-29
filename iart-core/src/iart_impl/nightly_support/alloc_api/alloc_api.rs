@@ -16,7 +16,10 @@ use core::sync::atomic::Ordering;
 use crate::{BACK_TRACE_MAX, TRACE_REMOVE_TYPE, TRACE_UNIQUE};
 #[cfg(feature = "allow-backtrace-logging")]
 use alloc::collections::VecDeque;
-#[cfg(feature = "allow-backtrace-logging")]
+#[cfg(any(
+    feature = "allow-backtrace-logging",
+    feature = "enable-pending-tracker"
+))]
 use core::panic::Location;
 
 impl<T, A> IartErr<A> for &'static T
@@ -178,7 +181,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             trans_fns: None,
             item: Some(item.into()),
             #[cfg(feature = "enable-pending-tracker")]
-            trans_fns: { crate::utils::add_to_tracker(Location::caller()) },
+            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
         }
     }
 
@@ -308,7 +311,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[must_use]
     #[track_caller]
     #[doc = include_str!("../../../../doc/fn/Iart/err.md")]
-    pub fn err(mut self) -> Result<GetErrRet<Item>, Self> {
+    pub fn err(mut self) -> Result<GetErrRet<Item, A>, Self> {
         self.handled = true;
 
         self.send_log();
@@ -325,7 +328,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                     self.data = Some(data);
                     Err(self)
                 }
-                Err(err) => Ok(GetErrRet {
+                Err(err) => Ok(GetErrRet::<Item, A> {
                     item: self.item.take(),
                     detail: err,
                 }),
@@ -371,7 +374,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[track_caller]
     #[must_use]
     #[doc = include_str!("../../../../doc/fn/Iart/unwrap_err.md")]
-    pub fn unwrap_err(mut self) -> GetErrRet {
+    pub fn unwrap_err(mut self) -> GetErrRet<Item, A> {
         self.send_log();
         self.handled = true;
 
@@ -381,7 +384,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         };
 
         match self.data.take() {
-            Some(Err(e)) => GetErrRet {
+            Some(Err(e)) => GetErrRet::<Item, A> {
                 detail: e,
                 item: self.item.take(),
             },
@@ -497,6 +500,10 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                             return;
                         }
                     }
+                }
+
+                if BACK_TRACE_MAX == 0 {
+                    return;
                 }
 
                 if log.len() >= BACK_TRACE_MAX {

@@ -43,14 +43,6 @@ pub struct ToResultRet<T: 'static, Item = ()> {
     pub item: Option<Item>,
 }
 
-#[doc = include_str!("../doc/structs/GetErrRet.md")]
-pub struct GetErrRet<Item> {
-    #[doc = include_str!("../doc/variable/global/detail.md")]
-    pub detail: ErrorDetail,
-    #[doc = include_str!("../doc/variable/global/item.md")]
-    pub item: Option<Item>,
-}
-
 #[doc = include_str!("../doc/structs/DownCasted.md")]
 pub struct DownCasted<T: 'static> {
     #[doc = include_str!("../doc/variable/global/detail.md")]
@@ -187,6 +179,14 @@ mod non_api_impl {
         #[doc = include_str!("../doc/variable/Iart/tracking_id.md")]
         pub(crate) tracking_id: Option<usize>,
     }
+
+    #[doc = include_str!("../doc/structs/GetErrRet.md")]
+    pub struct GetErrRet<Item> {
+        #[doc = include_str!("../doc/variable/global/detail.md")]
+        pub detail: ErrorDetail,
+        #[doc = include_str!("../doc/variable/global/item.md")]
+        pub item: Option<Item>,
+    }
 }
 
 #[cfg(feature = "for-nightly-allocator-api-support")]
@@ -280,6 +280,14 @@ mod api_impl {
         #[cfg(feature = "enable-pending-tracker")]
         #[doc = include_str!("../doc/variable/Iart/tracking_id.md")]
         pub(crate) tracking_id: Option<usize>,
+    }
+
+    #[doc = include_str!("../doc/structs/GetErrRet.md")]
+    pub struct GetErrRet<Item, A: alloc::alloc::Allocator + Clone = alloc::alloc::Global> {
+        #[doc = include_str!("../doc/variable/global/detail.md")]
+        pub detail: ErrorDetail<A>,
+        #[doc = include_str!("../doc/variable/global/item.md")]
+        pub item: Option<Item>,
     }
 }
 

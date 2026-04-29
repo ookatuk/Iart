@@ -22,6 +22,7 @@ use crate::{RESULT_TRACK_MAX, TRACKER, TRACKER_MAX_OFFSET};
 use core::panic::Location;
 #[cfg(feature = "enable-pending-tracker")]
 use core::sync::atomic::{AtomicUsize, Ordering};
+
 #[allow(unused)]
 #[doc = include_str!("../doc/fn/const_str_to_usize.md")]
 pub const fn const_str_to_usize(s: &str) -> usize {
@@ -215,6 +216,7 @@ pub fn add_to_tracker(data: &'static Location<'static>) -> Option<usize> {
 #[cfg(all(feature = "enable-pending-tracker"))]
 #[inline]
 #[doc = include_str!("../doc/fn/update_to_tracker.md")]
+#[allow(unused)]
 pub fn update_to_tracker(index: Option<usize>, data: &'static Location<'static>) {
     if let Some(index) = index {
         TRACKER[index].lock().unwrap()[1] = data;

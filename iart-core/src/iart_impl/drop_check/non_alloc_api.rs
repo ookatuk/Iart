@@ -1,5 +1,6 @@
 #![doc = include_str!("../../../doc/modules/non_alloc_api.md")]
 
+#[cfg(feature = "check-unused-result")]
 use crate::events::IartEvent;
 use crate::types::Iart;
 #[cfg(feature = "std")]

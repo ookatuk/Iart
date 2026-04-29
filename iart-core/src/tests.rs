@@ -181,18 +181,18 @@ fn test_from_option() {
     let opt = Some(50);
 
     #[cfg(feature = "alloc")]
-    let w = Iart::from_option(opt, MyError, None);
+    let w: Iart<i32> = Iart::from_option(opt, MyError, None);
     #[cfg(not(feature = "alloc"))]
-    let w = Iart::from_option(opt, &MyError, None);
+    let w: Iart<i32> = Iart::from_option(opt, &MyError, None);
 
     assert_eq!(w.unwrap(), 50);
 
     let opt_none: Option<i32> = None;
 
     #[cfg(feature = "alloc")]
-    let w_err = Iart::from_option(opt_none, MyError, Some("none error"));
+    let w_err: Iart<i32> = Iart::from_option(opt_none, MyError, Some("none error"));
     #[cfg(not(feature = "alloc"))]
-    let w_err = Iart::from_option(opt_none, &MyError, None);
+    let w_err: Iart<i32> = Iart::from_option(opt_none, &MyError, None);
 
     assert!(w_err.is_err().unwrap());
     let _ = w_err.unwrap_err();
@@ -476,11 +476,11 @@ fn test_error_item() {
 
     #[cfg(feature = "alloc")]
     fn test() -> Iart<u32> {
-        Iart::new_err(MyError, "error").with_item(5)
+        Iart::new_err(MyError, "error").with_item(5u32)
     }
     #[cfg(not(feature = "alloc"))]
     fn test() -> Iart<u32> {
-        Iart::new_err(&MyError, "error").with_item(5)
+        Iart::new_err(&MyError, "error").with_item(5u32)
     }
 
     let res = test();
@@ -492,7 +492,7 @@ fn test_error_item() {
 fn test_map_and_handled_trace() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let res = Iart::<u32>::new_ok(100);
+    let res = Iart::<u32>::new_ok(100u32);
     assert!(!res.handled);
 
     let res2 = res.map(|x| x);
@@ -510,7 +510,7 @@ fn to_result() {
     #[cfg(not(feature = "alloc"))]
     let res = Iart::<u32>::new_err(&MyError, "msg");
 
-    let res2 = Iart::<u32>::new_ok(5);
+    let res2 = Iart::<u32>::new_ok(5u32);
     let _ = unsafe { res.to_result::<MyError>() }
         .unwrap()
         .error_data

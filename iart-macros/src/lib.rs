@@ -53,14 +53,14 @@ pub fn iart_try(input: TokenStream) -> TokenStream {
                 match unsafe{iart.__internal_take_data()} {
                     Some(::core::result::Result::Ok(_)) => {
                         unsafe{iart.__internal_mark_handled()};
-                        unsafe{iart.__internal_take_item_unwrap()}
+                        unsafe{iart.__internal_take_item()}.unwrap()
                     }
                     Some(::core::result::Result::Err(err)) => {
                         return unsafe{::iart::prelude::Iart::__internal_rebuild_err(
                             err,
                             iart.__internal_take_log(),
                             iart.__internal_get_trans_fns(),
-                            iart.__internal_take_item_unwrap(),
+                            iart.__internal_take_item(),
                             iart.__internal_get_allocator(),
                             iart.__internal_take_track_id(),
                         )};

@@ -1,6 +1,7 @@
 #![doc = include_str!("../../../doc/modules/alloc_api.md")]
-
+#[cfg(feature = "check-unused-result")]
 use crate::events::IartEvent;
+
 use crate::types::Iart;
 
 impl<T, A: Clone + alloc::alloc::Allocator> Drop for Iart<T, A> {

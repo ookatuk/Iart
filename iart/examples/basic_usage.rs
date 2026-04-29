@@ -53,6 +53,7 @@ fn handler(event: IartEvent, iart: IartHandleDetails) -> core::fmt::Result {
                 iart.detail.unwrap().clone().try_cast_err::<MyErr>()
             });
             println!("error?: {:?}", iart.is_err);
+            #[cfg(feature = "allow-backtrace-logging")]
             println!("traces: {:?}", iart.log);
 
             println!("---");

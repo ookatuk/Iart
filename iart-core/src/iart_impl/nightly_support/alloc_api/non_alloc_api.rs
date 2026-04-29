@@ -24,7 +24,10 @@ use core::sync::atomic::Ordering;
 use crate::{BACK_TRACE_MAX, TRACE_REMOVE_TYPE, TRACE_UNIQUE};
 #[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
 use alloc::collections::VecDeque;
-#[cfg(feature = "allow-backtrace-logging")]
+#[cfg(any(
+    feature = "allow-backtrace-logging",
+    feature = "enable-pending-tracker"
+))]
 use core::panic::Location;
 
 impl<'t, T: IartErr + ?Sized + 't> IartErr for &'t T {
@@ -473,6 +476,10 @@ impl<Item> Iart<Item> {
                     }
                 }
 
+                if BACK_TRACE_MAX == 0 {
+                    return;
+                }
+
                 if log.len() >= BACK_TRACE_MAX {
                     match TRACE_REMOVE_TYPE {
                         "first" => return,
@@ -524,6 +531,10 @@ impl<Item> Iart<Item> {
                             }
                         }
                     }
+                }
+
+                if BACK_TRACE_MAX == 0 {
+                    return;
                 }
 
                 if log.len() >= BACK_TRACE_MAX {
