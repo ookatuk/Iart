@@ -663,6 +663,37 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             }
         }
     }
+
+    #[doc(hidden)]
+    #[inline(always)]
+    #[doc = include_str!("../../../../doc/fn/Iart/__internal_rebuild_err.md")]
+    pub unsafe fn __internal_rebuild_err(
+        err: Box<ErrorDetail, A>,
+        #[allow(unused)] log: Option<
+            alloc::collections::VecDeque<&'static core::panic::Location<'static>, A>,
+        >,
+        trans_fns: Option<(
+            unsafe fn(
+                Box<dyn IartErr + Send + Sync, A>,
+            ) -> Box<dyn core::any::Any + Send + Sync, A>,
+            unsafe fn(
+                Box<dyn core::any::Any + Send + Sync, A>,
+            ) -> Box<dyn IartErr + Send + Sync, A>,
+        )>,
+        #[allow(unused)] err_item: Option<Item>,
+        alloc: Option<A>,
+    ) -> Self {
+        Self {
+            handled: false,
+            data: Some(Err(err)),
+            #[cfg(feature = "error-can-have-item")]
+            err_item,
+            #[cfg(feature = "allow-backtrace-logging")]
+            log,
+            trans_fns,
+            allocator: alloc.unwrap(),
+        }
+    }
 }
 
 impl<T, A: alloc::alloc::Allocator + Clone> Debug for Iart<T, A> {

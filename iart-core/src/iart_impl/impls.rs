@@ -459,66 +459,6 @@ impl<Item: core::fmt::Debug> Iart<Item> {
     pub unsafe fn __internal_get_allocator(&self) -> Option<u32> {
         None
     }
-
-    #[doc(hidden)]
-    #[inline(always)]
-    #[doc = include_str!("../../doc/fn/Iart/__internal_rebuild_err.md")]
-    #[cfg(feature = "alloc")]
-    pub unsafe fn __internal_rebuild_err(
-        err: Box<ErrorDetail>,
-        #[allow(unused)] log: Option<VecDeque<&'static Location<'static>>>,
-        trans_fns: Option<(
-            unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
-            unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
-        )>,
-        #[allow(unused)] err_item: Option<Item>,
-        #[cfg(feature = "for-nightly-allocator-api-support")] alloc: Option<alloc::alloc::Global>,
-        #[cfg(not(feature = "for-nightly-allocator-api-support"))] _alloc: Option<u32>,
-    ) -> Self {
-        Self {
-            handled: false,
-            data: Some(Err(err)),
-            #[cfg(feature = "error-can-have-item")]
-            err_item,
-            #[cfg(feature = "allow-backtrace-logging")]
-            log,
-            trans_fns,
-            #[cfg(feature = "for-nightly-allocator-api-support")]
-            allocator: alloc.unwrap(),
-        }
-    }
-
-    #[doc(hidden)]
-    #[inline(always)]
-    #[doc = include_str!("../../doc/fn/Iart/__internal_rebuild_err.md")]
-    #[cfg(not(feature = "alloc"))]
-    pub unsafe fn __internal_rebuild_err(
-        err: ErrorDetail,
-        #[allow(unused)] log: Option<[Option<&'static Location<'static>>; BACK_TRACE_MAX]>,
-        trans_fns: Option<(
-            unsafe fn(
-                &'static (dyn IartErr + Send + Sync),
-            ) -> &'static (dyn core::any::Any + Send + Sync),
-            unsafe fn(
-                &'static (dyn core::any::Any + Send + Sync),
-            ) -> &'static (dyn IartErr + Send + Sync),
-        )>,
-        #[allow(unused)] err_item: Option<Item>,
-        #[cfg(feature = "for-nightly-allocator-api-support")] alloc: Option<alloc::alloc::Global>,
-        #[cfg(not(feature = "for-nightly-allocator-api-support"))] _alloc: Option<u32>,
-    ) -> Self {
-        Self {
-            handled: false,
-            data: Some(Err(err)),
-            #[cfg(feature = "error-can-have-item")]
-            err_item,
-            #[cfg(feature = "allow-backtrace-logging")]
-            log,
-            trans_fns,
-            #[cfg(feature = "for-nightly-allocator-api-support")]
-            allocator: alloc.unwrap(),
-        }
-    }
 }
 
 unsafe impl<T: Send> Send for Iart<T> {}
