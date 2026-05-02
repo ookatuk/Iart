@@ -53,7 +53,7 @@ fn main() {
     let res_err1: Iart<i32> = Iart::new_err(DummyErr {}, "Static error message");
     let res_err2: Iart<u32> = Iart::new_string_err(DummyErr {}, format!("Dynamic error: {}", 404));
 
-    // or Iart<u32> = Iart::Err_item(DummyErr{}, "test", 56); // `error-can-have-item`
+    // or Iart<u32> = Iart::new_err(DummyErr{}, "test").with_item(56);
 
     let mut res_err1: Iart<i32> = res_err1.ok().err().unwrap(); // ok function is if result is ok, return `i32`, if not ok, return self
 
