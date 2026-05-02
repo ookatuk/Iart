@@ -91,31 +91,34 @@ pub const TRACE_REMOVE_TYPE: &str = {
 };
 
 #[cfg(feature = "enable-limit-trace-application-level-size")]
-const TRACE_DATABASE_SIZE: usize = const_str_to_usize(env!("IART_TRACE_DATABASE_SIZE")); // TODO
+#[doc = include_str!("../doc/variable/TRACE_DATABASE_SIZE.md")]
+const TRACE_DATABASE_SIZE: usize = const_str_to_usize(env!("IART_TRACE_DATABASE_SIZE"));
 
 #[cfg(all(
     feature = "enable-limit-trace-application-level-size",
     feature = "alloc"
 ))]
-static TRACE_DATA_BASE: Lazy<
+#[doc = include_str!("../doc/variable/TRACE_DATABASE.md")]
+static TRACE_DATABASE: Lazy<
     Vec<spin::Mutex<alloc::collections::VecDeque<&'static Location<'static>>>>,
-> = // TODO
-    Lazy::new(|| {
-        (0..TRACE_DATABASE_SIZE)
-            .map(|_| spin::Mutex::new(alloc::collections::VecDeque::new()))
-            .collect()
-    });
+> = Lazy::new(|| {
+    (0..TRACE_DATABASE_SIZE)
+        .map(|_| spin::Mutex::new(alloc::collections::VecDeque::new()))
+        .collect()
+});
 
 #[cfg(all(
     feature = "enable-limit-trace-application-level-size",
     not(feature = "alloc")
 ))]
-static TRACE_DATA_BASE: [spin::Mutex<[Option<&'static Location<'static>>; BACK_TRACE_MAX]>;
+#[doc = include_str!("../doc/variable/TRACE_DATABASE.md")]
+static TRACE_DATABASE: [spin::Mutex<[Option<&'static Location<'static>>; BACK_TRACE_MAX]>;
     TRACE_DATABASE_SIZE] =
-    [const { spin::Mutex::new([None; BACK_TRACE_MAX]) }; TRACE_DATABASE_SIZE]; // TODO
+    [const { spin::Mutex::new([None; BACK_TRACE_MAX]) }; TRACE_DATABASE_SIZE];
 
 #[cfg(all(feature = "enable-limit-trace-application-level-size"))]
-const TRACE_DATABASE_MAX_OFFSET: usize = const_str_to_usize(env!("TRACE_DATABASE_MAX_OFFSET")); // TODO
+#[doc = include_str!("../doc/variable/MAX_OFFSET.md")]
+const TRACE_DATABASE_MAX_OFFSET: usize = const_str_to_usize(env!("TRACE_DATABASE_MAX_OFFSET"));
 
 #[allow(unused)]
 #[doc = include_str!("../doc/variable/TRACE_UNIQUE.md")]
@@ -164,12 +167,12 @@ static TRACKER: [spin::Mutex<Option<[&'static Location<'static>; 2]>>; RESULT_TR
 static TRACKING_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[cfg(all(feature = "enable-pending-tracker"))]
-#[doc = include_str!("../doc/variable/TRACKER_MAX_OFFSET.md")]
+#[doc = include_str!("../doc/variable/MAX_OFFSET.md")]
 const TRACKER_MAX_OFFSET: usize = const_str_to_usize(env!("IART_TRACKER_MAX_OFFSET"));
 
 #[inline]
 #[doc = include_str!("../doc/fn/set_handler.md")]
-pub fn set_handler(f: IartLogger) -> bool {
+pub fn set_handler(f: IartHandler) -> bool {
     if HANDLER_CREATED.is_completed() {
         return false;
     }

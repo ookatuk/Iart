@@ -1,5 +1,5 @@
 #[cfg(feature = "allow-backtrace-logging")]
-use crate::IartLog;
+use crate::IartBacktrace;
 use crate::events::AutoRequestType::{ToResultUsed, TryDownCastFail, TryDownCastUsed, TryUsed};
 use crate::events::IartEvent;
 use crate::types::{DummyErr, ErrorDetail, Iart};
@@ -259,7 +259,7 @@ impl<Item> Iart<Item> {
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_take_log.md")]
     #[cfg(feature = "allow-backtrace-logging")]
-    pub fn __internal_take_log(&mut self) -> Option<IartLog> {
+    pub fn __internal_take_log(&mut self) -> Option<IartBacktrace> {
         self.log.take()
     }
 

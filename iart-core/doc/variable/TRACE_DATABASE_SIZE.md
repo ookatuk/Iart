@@ -1,0 +1,1 @@
+Number of slots for storing traces

@@ -1,0 +1,1 @@
+A flag indicating that the item was dropped without being checked.

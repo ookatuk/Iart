@@ -31,7 +31,7 @@ use core::panic::Location;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(feature = "allow-backtrace-logging")]
-use crate::IartLog;
+use crate::IartBacktrace;
 
 #[allow(unused)]
 use crate::BACK_TRACE_MAX;
@@ -269,7 +269,7 @@ pub fn get_trace_location()
     let mut target = OFFSET.fetch_add(1, Ordering::Relaxed) % ODD_TARGET;
 
     for _ in 0..ODD_TARGET {
-        let res = crate::TRACE_DATA_BASE
+        let res = crate::TRACE_DATABASE
             .iter()
             .enumerate()
             .skip(target)
@@ -312,7 +312,7 @@ pub fn get_trace_location()
     let mut target = OFFSET.fetch_add(1, Ordering::Relaxed) % ODD_TARGET;
 
     for _ in 0..ODD_TARGET {
-        let res = crate::TRACE_DATA_BASE
+        let res = crate::TRACE_DATABASE
             .iter()
             .enumerate()
             .skip(target)
@@ -339,7 +339,7 @@ pub fn get_trace_location()
     not(feature = "for-nightly-allocator-api-support")
 ))]
 #[inline]
-pub fn create_trace<const IS_OK: bool>() -> Option<IartLog> {
+pub fn create_trace<const IS_OK: bool>() -> Option<IartBacktrace> {
     #[cfg(all(
         not(feature = "enable-limit-trace-application-level-size"),
         feature = "alloc"
@@ -408,7 +408,7 @@ pub fn create_trace<const IS_OK: bool>() -> Option<IartLog> {
 ))]
 pub fn create_trace<const IS_OK: bool, A: alloc::alloc::Allocator>(
     allocator: A,
-) -> Option<IartLog<A>> {
+) -> Option<IartBacktrace<A>> {
     let mut log = VecDeque::new_in(allocator);
     if IS_OK || cfg!(feature = "allow-backtrace-logging-with-ok") {
         log.push_back(Location::caller());

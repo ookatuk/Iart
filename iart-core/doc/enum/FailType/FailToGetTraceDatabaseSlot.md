@@ -1,0 +1,1 @@
+This flag is entered when it fails to secure a slot to store the trace.

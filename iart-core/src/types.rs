@@ -34,7 +34,7 @@ pub struct ToResultRet<T: 'static, Item = ()> {
 
     #[cfg(feature = "allow-backtrace-logging")]
     #[doc = include_str!("../doc/variable/global/log.md")]
-    pub backtrace: Option<IartLog>,
+    pub backtrace: Option<IartBacktrace>,
 
     #[doc = include_str!("../doc/variable/global/item.md")]
     pub item: Option<Item>,
@@ -89,7 +89,7 @@ mod non_api_impl {
     #[cfg(feature = "allow-backtrace-logging")]
     use core::panic::Location;
 
-    pub type IartLogger =
+    pub type IartHandler =
         for<'a, 'b> fn(event: IartEvent<'a, 'b>, iart: IartHandleDetails) -> core::fmt::Result;
 
     #[cfg(all(
@@ -97,33 +97,40 @@ mod non_api_impl {
         feature = "alloc",
         not(feature = "enable-limit-trace-application-level-size")
     ))]
-    pub type IartLog = VecDeque<&'static Location<'static>>; // TODO: DOC
+    #[doc = include_str!("../doc/structs/IartBacktrace.md")]
+    pub type IartBacktrace = VecDeque<&'static Location<'static>>;
     #[cfg(all(
         not(feature = "alloc"),
         feature = "allow-backtrace-logging",
         not(feature = "enable-limit-trace-application-level-size")
     ))]
-    pub type IartLog = [Option<&'static Location<'static>>; BACK_TRACE_MAX]; // TODO: DOC
+    #[doc = include_str!("../doc/structs/IartBacktrace.md")]
+    pub type IartBacktrace = [Option<&'static Location<'static>>; BACK_TRACE_MAX];
 
     #[cfg(all(
         feature = "allow-backtrace-logging",
         feature = "alloc",
         feature = "enable-limit-trace-application-level-size"
     ))]
-    pub type IartLog = spin::MutexGuard<'static, VecDeque<&'static Location<'static>>>; // TODO: DOC
+    #[doc = include_str!("../doc/structs/IartBacktrace.md")]
+    pub type IartBacktrace = spin::MutexGuard<'static, VecDeque<&'static Location<'static>>>;
 
     #[cfg(all(
         not(feature = "alloc"),
         feature = "allow-backtrace-logging",
         feature = "enable-limit-trace-application-level-size"
     ))]
-    pub type IartLog =
-        spin::MutexGuard<'static, [Option<&'static Location<'static>>; BACK_TRACE_MAX]>; // TODO: DOC
+    #[doc = include_str!("../doc/structs/IartBacktrace.md")]
+    pub type IartBacktrace =
+        spin::MutexGuard<'static, [Option<&'static Location<'static>>; BACK_TRACE_MAX]>;
 
     #[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
-    pub type IartLogRef<'a> = &'a VecDeque<&'static Location<'static>>; // TODO: DOC
+    #[doc = include_str!("../doc/structs/IartBacktraceRef.md")]
+    pub type IartBacktraceRef<'a> = &'a VecDeque<&'static Location<'static>>;
+
     #[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
-    pub type IartLogRef<'a> = &'a [Option<&'static Location<'static>>]; // TODO: DOC
+    #[doc = include_str!("../doc/structs/IartBacktraceRef.md")]
+    pub type IartBacktraceRef<'a> = &'a [Option<&'static Location<'static>>];
 
     #[doc = include_str!("../doc/structs/Trans.md")]
     #[derive(Clone, Copy, Debug)]
@@ -176,10 +183,10 @@ mod non_api_impl {
 
         #[doc = include_str!("../doc/variable/global/log.md")]
         #[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
-        pub log: Option<&'a IartLog>,
+        pub log: Option<&'a IartBacktrace>,
         #[doc = include_str!("../doc/variable/global/log.md")]
         #[cfg(all(feature = "allow-backtrace-logging", not(feature = "alloc")))]
-        pub log: Option<IartLogRef<'a>>,
+        pub log: Option<IartBacktraceRef<'a>>,
     }
 
     #[must_use]
@@ -196,11 +203,11 @@ mod non_api_impl {
 
         #[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
         #[doc = include_str!("../doc/variable/global/log.md")]
-        pub(crate) log: Option<IartLog>,
+        pub(crate) log: Option<IartBacktrace>,
 
         #[cfg(all(feature = "allow-backtrace-logging", not(feature = "alloc")))]
         #[doc = include_str!("../doc/variable/global/log.md")]
-        pub(crate) log: Option<IartLog>,
+        pub(crate) log: Option<IartBacktrace>,
 
         #[doc = include_str!("../doc/variable/global/trans_fns.md")]
         pub(crate) trans_fns: Option<Trans>,
@@ -266,10 +273,10 @@ mod api_impl {
         ) -> Box<dyn IartErr<A> + Send + Sync, A>,
     }
 
-    pub type IartLogger<A = alloc::alloc::Global> =
+    pub type IartHandler<A = alloc::alloc::Global> =
         for<'a, 'b> fn(event: IartEvent<'a, 'b>, iart: IartHandleDetails<A>) -> core::fmt::Result;
 
-    pub type IartLog<A = alloc::alloc::Global> = VecDeque<&'static Location<'static>, A>;
+    pub type IartBacktrace<A = alloc::alloc::Global> = VecDeque<&'static Location<'static>, A>;
 
     #[allow(unused)]
     #[doc = include_str!("../doc/structs/IartHandleDetails.md")]
@@ -280,7 +287,7 @@ mod api_impl {
 
         #[cfg(feature = "allow-backtrace-logging")]
         #[doc = include_str!("../doc/variable/global/log.md")]
-        pub log: Option<&'a IartLog<A>>,
+        pub log: Option<&'a IartBacktrace<A>>,
 
         pub is_err: Option<bool>,
     }
@@ -296,7 +303,7 @@ mod api_impl {
 
         #[cfg(feature = "allow-backtrace-logging")]
         #[doc = include_str!("../doc/variable/global/log.md")]
-        pub(crate) log: Option<IartLog<A>>,
+        pub(crate) log: Option<IartBacktrace<A>>,
 
         #[doc = include_str!("../doc/variable/global/item.md")]
         pub(crate) item: Option<Item>,

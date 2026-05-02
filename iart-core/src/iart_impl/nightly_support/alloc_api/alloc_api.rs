@@ -1,7 +1,7 @@
 #![doc = include_str!("../../../../doc/modules/alloc_api.md")]
 
 use crate::events::{AutoRequestType, IartEvent};
-use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails, IartLogger};
+use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails, IartHandler};
 use crate::utils::{cold_path, unlikely};
 use crate::{GetErrRet, Trans};
 use crate::{HANDLER, is_initialized_handler};
@@ -123,7 +123,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         let ptr = HANDLER.load(Ordering::Acquire);
 
         if !ptr.is_null() {
-            let logger: IartLogger<A> = unsafe { core::mem::transmute(ptr) };
+            let logger: IartHandler<A> = unsafe { core::mem::transmute(ptr) };
 
             let detail = match self.data.as_ref() {
                 Some(data) => data.as_ref().err(),
@@ -426,7 +426,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         self.send_log();
 
         unsafe {
-            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::UnwrapUsed))
+            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Unwrap))
                 .unwrap_unchecked()
         };
 
@@ -659,7 +659,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[doc = include_str!("../../../../doc/fn/Iart/__internal_rebuild_err.md")]
     pub unsafe fn __internal_rebuild_err(
         err: ErrorDetail<A>,
-        #[cfg(feature = "allow-backtrace-logging")] log: Option<crate::types::IartLog<A>>,
+        #[cfg(feature = "allow-backtrace-logging")] log: Option<crate::types::IartBacktrace<A>>,
         #[cfg(not(feature = "allow-backtrace-logging"))] _: Option<i32>,
         trans_fns: Option<Trans<A>>,
         item: Option<Item>,

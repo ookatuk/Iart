@@ -1,0 +1,1 @@
+A flag that is called each time an element is added and subsequently removed when the backtrace becomes full.

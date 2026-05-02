@@ -1,0 +1,1 @@
+A flag that is called every time `Display`/`Debug` is called.

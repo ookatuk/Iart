@@ -4,7 +4,7 @@ use crate::Trans;
 use crate::events::AutoRequestType;
 use crate::events::IartEvent;
 use crate::is_initialized_handler;
-use crate::types::IartLogger;
+use crate::types::IartHandler;
 use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails};
 use crate::utils::cold_path;
 use crate::utils::unlikely;
@@ -103,7 +103,7 @@ impl<Item> Iart<Item> {
 
         let ptr = HANDLER.load(Ordering::Acquire);
         if !ptr.is_null() {
-            let logger: IartLogger = unsafe { core::mem::transmute(ptr) };
+            let logger: IartHandler = unsafe { core::mem::transmute(ptr) };
 
             let details = IartHandleDetails {
                 detail: self.data.as_ref().and_then(|r| r.as_ref().err()),
@@ -141,7 +141,7 @@ impl<Item> Iart<Item> {
 
         let ptr = HANDLER.load(Ordering::Acquire);
         if !ptr.is_null() {
-            let logger: IartLogger = unsafe { core::mem::transmute(ptr) };
+            let logger: IartHandler = unsafe { core::mem::transmute(ptr) };
 
             let details = IartHandleDetails {
                 detail: self.data.as_ref().and_then(|r| r.as_ref().err()),
@@ -479,7 +479,7 @@ impl<Item> Iart<Item> {
         self.handled = true;
 
         let _ = unsafe {
-            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::UnwrapUsed))
+            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Unwrap))
                 .unwrap_unchecked()
         };
 
@@ -762,7 +762,7 @@ impl<Item> Iart<Item> {
     #[doc = include_str!("../../../../doc/fn/Iart/__internal_rebuild_err.md")]
     pub unsafe fn __internal_rebuild_err(
         err: ErrorDetail,
-        #[cfg(feature = "allow-backtrace-logging")] log: Option<crate::types::IartLog>,
+        #[cfg(feature = "allow-backtrace-logging")] log: Option<crate::types::IartBacktrace>,
         #[cfg(not(feature = "allow-backtrace-logging"))] _: Option<i32>,
         trans_fns: Option<Trans>,
         item: Option<Item>,
