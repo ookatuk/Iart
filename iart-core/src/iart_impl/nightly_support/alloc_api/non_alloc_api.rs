@@ -800,6 +800,7 @@ impl<Item: Clone> Clone for Iart<Item> {
 
 impl<T> Default for Iart<T> {
     #[cfg(feature = "alloc")]
+    #[track_caller]
     fn default() -> Self {
         Self {
             data: Some(Err(Box::new(ErrorDetail::default()))),
@@ -817,6 +818,7 @@ impl<T> Default for Iart<T> {
     }
 
     #[cfg(not(feature = "alloc"))]
+    #[track_caller]
     fn default() -> Self {
         Self {
             data: Some(Err(ErrorDetail::default())),

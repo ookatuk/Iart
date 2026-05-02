@@ -702,6 +702,7 @@ impl<Item: Clone, A: alloc::alloc::Allocator + Clone + 'static> Clone for Iart<I
 }
 
 impl<T, A: alloc::alloc::Allocator + Clone + 'static + Default> Default for Iart<T, A> {
+    #[track_caller]
     fn default() -> Self {
         let alloc = A::default();
 
