@@ -7,6 +7,12 @@
 
 ---
 
+> [!TIP]
+> 
+> This Beta version.
+> 
+> The documentation is definitely insufficient.
+
 a structure inspired by [`Result`], designed for `std` and `no-std`.
 supporting event-driven handling and dynamic tracing.
 
