@@ -668,17 +668,17 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[inline(always)]
     #[doc = include_str!("../../../../doc/fn/Iart/__internal_rebuild_err.md")]
     pub unsafe fn __internal_rebuild_err(
-        err: Box<ErrorDetail, A>,
+        err: Box<ErrorDetail<A>, A>,
         #[allow(unused)] log: Option<
             alloc::collections::VecDeque<&'static core::panic::Location<'static>, A>,
         >,
         trans_fns: Option<(
             unsafe fn(
-                Box<dyn IartErr + Send + Sync, A>,
+                Box<dyn IartErr<A> + Send + Sync, A>,
             ) -> Box<dyn core::any::Any + Send + Sync, A>,
             unsafe fn(
                 Box<dyn core::any::Any + Send + Sync, A>,
-            ) -> Box<dyn IartErr + Send + Sync, A>,
+            ) -> Box<dyn IartErr<A> + Send + Sync, A>,
         )>,
         #[allow(unused)] err_item: Option<Item>,
         alloc: Option<A>,
