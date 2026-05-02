@@ -3,7 +3,7 @@
 ## Supported Versions
 
 * 2.x.x: Add feature (not LTS)
-* 1.1.x: Fix only(not LTS)
+* 1.1.x: Add feature (not LTS)
 * Others(0.x~): Not supported
 
 ## Vulnerability Reporting
