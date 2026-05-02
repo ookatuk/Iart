@@ -19,11 +19,10 @@ pub use core::hint::{cold_path, unlikely};
 #[cfg(feature = "enable-pending-tracker")]
 use crate::{RESULT_TRACK_MAX, TRACKER, TRACKER_MAX_OFFSET};
 #[cfg(feature = "alloc")]
+#[allow(unused_imports)]
 use alloc::collections::VecDeque;
-#[cfg(any(
-    feature = "enable-limit-trace-application-level-size",
-    feature = "allow-backtrace-logging"
-))]
+
+#[allow(unused_imports)]
 use core::panic::Location;
 #[cfg(any(
     feature = "enable-pending-tracker",
@@ -34,7 +33,7 @@ use core::sync::atomic::{AtomicUsize, Ordering};
 #[cfg(feature = "allow-backtrace-logging")]
 use crate::IartLog;
 
-#[cfg(feature = "enable-limit-trace-application-level-size")]
+#[allow(unused)]
 use crate::BACK_TRACE_MAX;
 
 #[allow(unused)]
@@ -278,7 +277,7 @@ pub fn get_trace_location()
             .find_map(|(_, mutex)| mutex.try_lock());
 
         if let Some(index) = res {
-            #[cfg(feature = "enable-pending-tracker-tracking-count")]
+            #[cfg(feature = "enable-limit-trace-application-level-size-tracking-count")]
             crate::TRACKING_COUNT.fetch_add(1, Ordering::Relaxed);
             return Some(index);
         }
@@ -321,7 +320,7 @@ pub fn get_trace_location()
             .find_map(|(_, mutex)| mutex.try_lock());
 
         if let Some(index) = res {
-            #[cfg(feature = "enable-pending-tracker-tracking-count")]
+            #[cfg(feature = "enable-limit-trace-application-level-size-tracking-count")]
             crate::TRACKING_COUNT.fetch_add(1, Ordering::Relaxed);
             return Some(index);
         }
@@ -367,12 +366,31 @@ pub fn create_trace<const IS_OK: bool>() -> Option<IartLog> {
         Some(log)
     };
 
-    #[cfg(feature = "enable-limit-trace-application-level-size")]
+    #[cfg(all(
+        feature = "enable-limit-trace-application-level-size",
+        not(feature = "alloc")
+    ))]
     let res = {
-        let data = get_trace_location();
+        let mut data = get_trace_location();
 
         if IS_OK || cfg!(feature = "allow-backtrace-logging-with-ok") {
-            if let Some(mut log) = data {
+            if let Some(log) = data.as_mut() {
+                log[0] = Some(Location::caller());
+            }
+        }
+
+        data
+    };
+
+    #[cfg(all(
+        feature = "enable-limit-trace-application-level-size",
+        feature = "alloc"
+    ))]
+    let res = {
+        let mut data = get_trace_location();
+
+        if IS_OK || cfg!(feature = "allow-backtrace-logging-with-ok") {
+            if let Some(log) = data.as_mut() {
                 log.push_back(Location::caller());
             }
         }
@@ -388,7 +406,9 @@ pub fn create_trace<const IS_OK: bool>() -> Option<IartLog> {
     feature = "allow-backtrace-logging",
     feature = "for-nightly-allocator-api-support"
 ))]
-pub fn create_trace<const IS_OK: bool>(allocator: alloc::alloc::Allocator) -> IartLog {
+pub fn create_trace<const IS_OK: bool, A: alloc::alloc::Allocator>(
+    allocator: A,
+) -> Option<IartLog<A>> {
     let mut log = VecDeque::new_in(allocator);
     if IS_OK || cfg!(feature = "allow-backtrace-logging-with-ok") {
         log.push_back(Location::caller());

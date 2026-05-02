@@ -49,4 +49,5 @@ enable-default-handler = ["iart-core/enable-default-handler", "std"]
 
 alloc = ["iart-core/alloc", "iart-macros/alloc"]
 
-enable-limit-backtrace-slices = ["allow-backtrace-logging"] # TODO: update name
+enable-limit-trace-application-level-size = ["allow-backtrace-logging", "iart-core/enable-limit-trace-application-level-size"]
+enable-limit-trace-application-level-size-tracking-count = ["enable-limit-trace-application-level-size", "iart-core/enable-limit-trace-application-level-size-tracking-count"]

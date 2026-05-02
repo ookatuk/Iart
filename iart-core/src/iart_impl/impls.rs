@@ -312,33 +312,6 @@ impl<Item> Iart<Item> {
 
     #[doc(hidden)]
     #[inline(always)]
-    #[doc = include_str!("../../doc/fn/Iart/__internal_rebuild_err.md")]
-    #[cfg(feature = "alloc")]
-    pub unsafe fn __internal_rebuild_err(
-        err: ErrorDetail,
-        #[cfg(feature = "allow-backtrace-logging")] log: Option<IartLog>,
-        #[cfg(not(feature = "allow-backtrace-logging"))] _: Option<u32>,
-        trans_fns: Option<Trans>,
-        item: Option<Item>,
-        #[cfg(feature = "for-nightly-allocator-api-support")] alloc: Option<alloc::alloc::Global>,
-        #[cfg(not(feature = "for-nightly-allocator-api-support"))] _: Option<u32>,
-        #[allow(unused)] track_id: Option<usize>,
-    ) -> Self {
-        Self {
-            handled: false,
-            data: Some(Err(err)),
-            item,
-            #[cfg(feature = "allow-backtrace-logging")]
-            log,
-            trans_fns,
-            #[cfg(feature = "for-nightly-allocator-api-support")]
-            allocator: alloc.unwrap(),
-            #[cfg(feature = "enable-pending-tracker")]
-            tracking_id: track_id,
-        }
-    }
-    #[doc(hidden)]
-    #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_take_item.md")]
     pub fn __internal_take_item(&mut self) -> Option<Item> {
         self.item.take()
@@ -349,4 +322,4 @@ unsafe impl<T: Send> Send for Iart<T> {}
 unsafe impl<T: Sync> Sync for Iart<T> {}
 
 #[cfg(feature = "core_error-support")]
-impl core_error::Error for Iart {}
+impl<T: core::fmt::Debug + core::fmt::Display> core_error::Error for Iart<T> {}

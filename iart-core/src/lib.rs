@@ -26,7 +26,13 @@ mod iart_impl;
 mod tests;
 mod types;
 
-#[cfg(all(feature = "enable-pending-tracker", feature = "alloc"))]
+#[cfg(all(
+    any(
+        feature = "enable-pending-tracker",
+        feature = "enable-limit-trace-application-level-size"
+    ),
+    feature = "alloc"
+))]
 use alloc::vec::Vec;
 #[cfg(any(
     feature = "enable-pending-tracker",
@@ -109,7 +115,7 @@ static TRACE_DATA_BASE: [spin::Mutex<[Option<&'static Location<'static>>; BACK_T
     [const { spin::Mutex::new([None; BACK_TRACE_MAX]) }; TRACE_DATABASE_SIZE]; // TODO
 
 #[cfg(all(feature = "enable-limit-trace-application-level-size"))]
-const TRACE_DATABASE_MAX_OFFSET: usize = const_str_to_usize(env!("IART_TRACKER_MAX_OFFSET")); // TODO
+const TRACE_DATABASE_MAX_OFFSET: usize = const_str_to_usize(env!("TRACE_DATABASE_MAX_OFFSET")); // TODO
 
 #[allow(unused)]
 #[doc = include_str!("../doc/variable/TRACE_UNIQUE.md")]

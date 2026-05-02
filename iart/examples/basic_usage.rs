@@ -37,7 +37,7 @@ fn error_raise() -> Iart<i32> {
 
 fn use_try() -> Iart<i32> {
     #[allow(unexpected_cfgs)]
-    let _ = iart_try!(error_raise());
+    let _: i32 = iart_try!(error_raise());
 
     unreachable!();
 }

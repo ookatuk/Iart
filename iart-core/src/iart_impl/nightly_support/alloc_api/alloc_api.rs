@@ -2,7 +2,7 @@
 
 use crate::events::{AutoRequestType, IartEvent};
 use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails, IartLogger};
-use crate::utils::{cold_path, create_trace, unlikely};
+use crate::utils::{cold_path, unlikely};
 use crate::{GetErrRet, Trans};
 use crate::{HANDLER, is_initialized_handler};
 use alloc::alloc::Allocator;
@@ -13,9 +13,19 @@ use core::fmt::{Debug, Display, Formatter};
 use core::sync::atomic::Ordering;
 
 #[cfg(feature = "allow-backtrace-logging")]
-use crate::{BACK_TRACE_MAX, TRACE_REMOVE_TYPE, TRACE_UNIQUE};
+use crate::utils::create_trace;
+
+#[cfg(any(
+    all(
+        feature = "allow-backtrace-logging",
+        feature = "enable-limit-trace-application-level-size-tracking-count"
+    ),
+    feature = "enable-pending-tracker"
+))]
+use crate::events::FailType;
+
 #[cfg(feature = "allow-backtrace-logging")]
-use alloc::collections::VecDeque;
+use crate::{BACK_TRACE_MAX, TRACE_REMOVE_TYPE, TRACE_UNIQUE};
 #[cfg(any(
     feature = "allow-backtrace-logging",
     feature = "enable-pending-tracker"
@@ -166,17 +176,43 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     #[inline]
     #[track_caller]
     pub fn new_ok_in(item: impl Into<Item>, allocator: A) -> Iart<Item, A> {
-        Iart::<Item, A> {
+        #[cfg(feature = "enable-pending-tracker")]
+        let tracking_id = crate::utils::add_to_tracker(Location::caller());
+        #[cfg(feature = "allow-backtrace-logging")]
+        let log = create_trace::<true, A>(allocator.clone());
+
+        let data = Iart::<Item, A> {
             data: Some(Ok(())),
             handled: false,
             allocator: allocator.clone(),
             #[cfg(feature = "allow-backtrace-logging")]
-            log: create_trace::<true>(allocator),
+            log,
             trans_fns: None,
             item: Some(item.into()),
             #[cfg(feature = "enable-pending-tracker")]
-            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
+            tracking_id,
+        };
+
+        #[cfg(feature = "enable-pending-tracker")]
+        if tracking_id.is_none() {
+            data.send_log_to_handler::<true>(IartEvent::CreationDegraded(
+                FailType::FailToGetTrackerSlot,
+            ))
+            .unwrap();
         }
+
+        #[cfg(all(
+            feature = "allow-backtrace-logging",
+            feature = "enable-limit-trace-application-level-size-tracking-count"
+        ))]
+        if log.is_none() {
+            data.send_log_to_handler::<true>(IartEvent::CreationDegraded(
+                FailType::FailToGetTraceDatabaseSlot,
+            ))
+            .unwrap();
+        }
+
+        data
     }
 
     #[track_caller]
@@ -189,7 +225,12 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     ) -> Iart<Item, A> {
         let to_any = jen_fns!(ERR, A);
 
-        Iart::<Item, A> {
+        #[cfg(feature = "enable-pending-tracker")]
+        let tracking_id = crate::utils::add_to_tracker(Location::caller());
+        #[cfg(feature = "allow-backtrace-logging")]
+        let log = create_trace::<false, A>(allocator.clone());
+
+        let data = Iart::<Item, A> {
             data: Some(Err(unsafe {
                 ErrorDetail::<A>::new(
                     Box::new_in(error, allocator.clone()),
@@ -200,12 +241,33 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             handled: false,
             allocator: allocator.clone(),
             #[cfg(feature = "allow-backtrace-logging")]
-            log: create_trace::<false>(allocator),
+            log,
             trans_fns: Some(to_any),
             item: None,
             #[cfg(feature = "enable-pending-tracker")]
-            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
+            tracking_id,
+        };
+
+        #[cfg(feature = "enable-pending-tracker")]
+        if tracking_id.is_none() {
+            data.send_log_to_handler::<true>(IartEvent::CreationDegraded(
+                FailType::FailToGetTrackerSlot,
+            ))
+            .unwrap();
         }
+
+        #[cfg(all(
+            feature = "allow-backtrace-logging",
+            feature = "enable-limit-trace-application-level-size-tracking-count"
+        ))]
+        if log.is_none() {
+            data.send_log_to_handler::<true>(IartEvent::CreationDegraded(
+                FailType::FailToGetTraceDatabaseSlot,
+            ))
+            .unwrap();
+        }
+
+        data
     }
 
     #[track_caller]
@@ -219,10 +281,15 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
     where
         ERR: IartErr<A> + Send + Sync + 'static,
     {
+        #[cfg(feature = "enable-pending-tracker")]
+        let tracking_id = crate::utils::add_to_tracker(Location::caller());
+        #[cfg(feature = "allow-backtrace-logging")]
+        let log = create_trace::<false, A>(allocator.clone());
+
         let res = {
             let to_any = jen_fns!(ERR, A);
 
-            Self {
+            let data = Self {
                 data: Some(Err(unsafe {
                     ErrorDetail::new(
                         Box::new_in(error, allocator.clone()),
@@ -233,12 +300,33 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                 handled: false,
                 allocator: allocator.clone(),
                 #[cfg(feature = "allow-backtrace-logging")]
-                log: create_trace::<false>(allocator),
+                log,
                 trans_fns: Some(to_any),
                 item: None,
                 #[cfg(feature = "enable-pending-tracker")]
-                tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
+                tracking_id,
+            };
+
+            #[cfg(feature = "enable-pending-tracker")]
+            if tracking_id.is_none() {
+                data.send_log_to_handler::<true>(IartEvent::CreationDegraded(
+                    FailType::FailToGetTrackerSlot,
+                ))
+                .unwrap();
             }
+
+            #[cfg(all(
+                feature = "allow-backtrace-logging",
+                feature = "enable-limit-trace-application-level-size-tracking-count"
+            ))]
+            if log.is_none() {
+                data.send_log_to_handler::<true>(IartEvent::CreationDegraded(
+                    FailType::FailToGetTraceDatabaseSlot,
+                ))
+                .unwrap();
+            }
+
+            data
         };
 
         res
@@ -565,6 +653,31 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
 
         self.internal_map(fns)
     }
+
+    #[doc(hidden)]
+    #[inline(always)]
+    #[doc = include_str!("../../../../doc/fn/Iart/__internal_rebuild_err.md")]
+    pub unsafe fn __internal_rebuild_err(
+        err: ErrorDetail<A>,
+        #[cfg(feature = "allow-backtrace-logging")] log: Option<crate::types::IartLog<A>>,
+        #[cfg(not(feature = "allow-backtrace-logging"))] _: Option<i32>,
+        trans_fns: Option<Trans<A>>,
+        item: Option<Item>,
+        alloc: Option<A>,
+        #[allow(unused)] track_id: Option<usize>,
+    ) -> Self {
+        Self {
+            handled: false,
+            data: Some(Err(err)),
+            item,
+            #[cfg(feature = "allow-backtrace-logging")]
+            log,
+            trans_fns,
+            allocator: alloc.unwrap(),
+            #[cfg(feature = "enable-pending-tracker")]
+            tracking_id: track_id,
+        }
+    }
 }
 
 impl<T, A: alloc::alloc::Allocator + Clone> Debug for Iart<T, A> {
@@ -583,19 +696,47 @@ where
 }
 
 impl<T, A: alloc::alloc::Allocator + Clone + 'static + Default> Default for Iart<T, A> {
+    #[track_caller]
     fn default() -> Self {
         let alloc = A::default();
-        Iart::<T, A> {
+
+        #[cfg(feature = "enable-pending-tracker")]
+        let tracking_id = crate::utils::add_to_tracker(Location::caller());
+        #[cfg(feature = "allow-backtrace-logging")]
+        let log = create_trace::<false, A>(alloc.clone());
+
+        let data = Iart::<T, A> {
             data: Some(Err(ErrorDetail::default_in(alloc.clone()))),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
-            log: create_trace::<false>(alloc),
+            log,
             allocator: alloc,
             item: None,
             trans_fns: Some(jen_fns!(DummyErr, A)),
             #[cfg(feature = "enable-pending-tracker")]
-            tracking_id: { crate::utils::add_to_tracker(Location::caller()) },
+            tracking_id,
+        };
+
+        #[cfg(feature = "enable-pending-tracker")]
+        if tracking_id.is_none() {
+            data.send_log_to_handler::<true>(IartEvent::CreationDegraded(
+                FailType::FailToGetTrackerSlot,
+            ))
+            .unwrap();
         }
+
+        #[cfg(all(
+            feature = "allow-backtrace-logging",
+            feature = "enable-limit-trace-application-level-size-tracking-count"
+        ))]
+        if log.is_none() {
+            data.send_log_to_handler::<true>(IartEvent::CreationDegraded(
+                FailType::FailToGetTraceDatabaseSlot,
+            ))
+            .unwrap();
+        }
+
+        data
     }
 }
 

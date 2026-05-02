@@ -79,8 +79,6 @@ pub struct ErrorDetail {
 mod non_api_impl {
     #[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
     use crate::BACK_TRACE_MAX;
-    #[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
-    use crate::BACK_TRACE_MAX;
     use crate::events::IartEvent;
     use crate::types::ErrorDetail;
     #[cfg(feature = "alloc")]
@@ -125,7 +123,7 @@ mod non_api_impl {
     #[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
     pub type IartLogRef<'a> = &'a VecDeque<&'static Location<'static>>; // TODO: DOC
     #[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
-    pub type IartLogRef<'a> = &'a [Option<&'static Location<'static>>; BACK_TRACE_MAX]; // TODO: DOC
+    pub type IartLogRef<'a> = &'a [Option<&'static Location<'static>>]; // TODO: DOC
 
     #[doc = include_str!("../doc/structs/Trans.md")]
     #[derive(Clone, Copy, Debug)]
@@ -226,11 +224,9 @@ mod api_impl {
     use crate::events::IartEvent;
     use crate::types::ErrorDetail;
     use alloc::boxed::Box;
-    #[cfg(feature = "allow-backtrace-logging")]
     use alloc::collections::VecDeque;
     use core::alloc::Allocator;
     use core::fmt::{Debug, Display};
-    #[cfg(feature = "allow-backtrace-logging")]
     use core::panic::Location;
 
     #[cfg(feature = "for-nightly-error-generic-member-access")]
@@ -273,8 +269,7 @@ mod api_impl {
     pub type IartLogger<A = alloc::alloc::Global> =
         for<'a, 'b> fn(event: IartEvent<'a, 'b>, iart: IartHandleDetails<A>) -> core::fmt::Result;
 
-    pub type IartLog<A: alloc::alloc::Allocator = alloc::alloc::GlobalAlloc> =
-        VecDeque<&'static Location<'static>, A>;
+    pub type IartLog<A = alloc::alloc::Global> = VecDeque<&'static Location<'static>, A>;
 
     #[allow(unused)]
     #[doc = include_str!("../doc/structs/IartHandleDetails.md")]
@@ -333,8 +328,6 @@ pub use api_impl::*;
 #[doc(inline)]
 pub use non_api_impl::*;
 
-#[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
-use crate::BACK_TRACE_MAX;
 #[cfg(feature = "alloc")]
 use alloc::borrow::Cow;
 #[cfg(feature = "alloc")]

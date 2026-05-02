@@ -320,7 +320,7 @@ fn test_error_preserved() {
 fn test_allocator_ok() {
     let _guard = TEST_LOG_LOCK.lock();
 
-    let w = Iart::new_ok_in(42, Global);
+    let w: Iart<i32> = Iart::new_ok_in(42, Global);
     assert!(w.is_ok().unwrap());
     assert_eq!(w.unwrap(), 42);
 }
@@ -528,7 +528,7 @@ fn tracker() {
 
     assert_eq!(crate::is_found_pending_data(), false);
 
-    let res = Iart::new_ok("hi!");
+    let res: Iart<&str> = Iart::new_ok("hi!");
 
     assert_eq!(crate::is_found_pending_data(), true);
 
