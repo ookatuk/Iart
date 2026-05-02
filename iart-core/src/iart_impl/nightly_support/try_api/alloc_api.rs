@@ -51,7 +51,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static + Default + Send + Sync 
         let alloc = residual.allocator.clone();
         residual.handled = true;
         Self {
-            data: residual.data.take().map(|d| Err(unsafe { d.unwrap_err() })),
+            data: residual.data.take().map(|d| Err(d.unwrap_err())),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
             log: residual.log.take(),

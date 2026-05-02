@@ -102,7 +102,10 @@ pub fn derive_iart_err(item: TokenStream) -> TokenStream {
         }
     };
 
-    #[cfg(not(feature = "alloc"))]
+    #[cfg(all(
+        not(feature = "alloc"),
+        not(feature = "for-nightly-allocator-api-support")
+    ))]
     let body = quote! {};
 
     let expanded = quote! {

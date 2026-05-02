@@ -746,6 +746,64 @@ impl<Item> Iart<Item> {
             res
         }
     }
+
+    #[doc(hidden)]
+    #[inline(always)]
+    #[doc = include_str!("../../../../doc/fn/Iart/__internal_rebuild_err.md")]
+    #[cfg(feature = "alloc")]
+    pub unsafe fn __internal_rebuild_err(
+        err: Box<ErrorDetail>,
+        #[allow(unused)] log: Option<
+            alloc::collections::VecDeque<&'static core::panic::Location<'static>>,
+        >,
+        trans_fns: Option<(
+            unsafe fn(Box<dyn IartErr + Send + Sync>) -> Box<dyn core::any::Any + Send + Sync>,
+            unsafe fn(Box<dyn core::any::Any + Send + Sync>) -> Box<dyn IartErr + Send + Sync>,
+        )>,
+        #[allow(unused)] err_item: Option<Item>,
+        _: Option<u32>,
+    ) -> Self {
+        Self {
+            handled: false,
+            data: Some(Err(err)),
+            #[cfg(feature = "error-can-have-item")]
+            err_item,
+            #[cfg(feature = "allow-backtrace-logging")]
+            log,
+            trans_fns,
+        }
+    }
+
+    #[doc(hidden)]
+    #[inline(always)]
+    #[doc = include_str!("../../../../doc/fn/Iart/__internal_rebuild_err.md")]
+    #[cfg(not(feature = "alloc"))]
+    pub unsafe fn __internal_rebuild_err(
+        err: ErrorDetail,
+        #[allow(unused)] log: Option<
+            [Option<&'static core::panic::Location<'static>>; crate::BACK_TRACE_MAX],
+        >,
+        trans_fns: Option<(
+            unsafe fn(
+                &'static (dyn IartErr + Send + Sync),
+            ) -> &'static (dyn core::any::Any + Send + Sync),
+            unsafe fn(
+                &'static (dyn core::any::Any + Send + Sync),
+            ) -> &'static (dyn IartErr + Send + Sync),
+        )>,
+        #[allow(unused)] err_item: Option<Item>,
+        _: Option<u32>,
+    ) -> Self {
+        Self {
+            handled: false,
+            data: Some(Err(err)),
+            #[cfg(feature = "error-can-have-item")]
+            err_item,
+            #[cfg(feature = "allow-backtrace-logging")]
+            log,
+            trans_fns,
+        }
+    }
 }
 
 impl<T: Display> Display for Iart<T> {
@@ -800,6 +858,7 @@ impl<Item: Clone> Clone for Iart<Item> {
 
 impl<T> Default for Iart<T> {
     #[cfg(feature = "alloc")]
+    #[track_caller]
     fn default() -> Self {
         Self {
             data: Some(Err(Box::new(ErrorDetail::default()))),
@@ -817,6 +876,7 @@ impl<T> Default for Iart<T> {
     }
 
     #[cfg(not(feature = "alloc"))]
+    #[track_caller]
     fn default() -> Self {
         Self {
             data: Some(Err(ErrorDetail::default())),
