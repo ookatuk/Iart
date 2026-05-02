@@ -6,7 +6,7 @@ members = ["iart", "iart-core", "iart-macros"]
 [workspace.package]
 edition = "2024"
 
-version = "2.0.0-alpha.1"
+version = "2.0.0-beta.1"
 authors = ["ookatu <hgfhgfojgljgjhdiopyfgiiiiiu@outlook.com>"]
 
 description = "The Infomation and Result Trace crate"
@@ -18,6 +18,6 @@ keywords = ["error-handling", "no-std", "tracing", "diagnostics"]
 categories = ["rust-patterns", "no-std", "development-tools::debugging"]
 
 [workspace.dependencies]
-iart-core = { path = "iart-core", version = "2.0.0-alpha.1", default-features = false }
-iart-macros = { path = "iart-macros", version = "2.0.0-alpha.1", default-features = false }
+iart-core = { path = "iart-core", version = "2.0.0-beta.1", default-features = false }
+iart-macros = { path = "iart-macros", version = "2.0.0-beta.1", default-features = false }
 
