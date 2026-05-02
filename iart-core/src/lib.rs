@@ -28,9 +28,18 @@ mod types;
 
 #[cfg(all(feature = "enable-pending-tracker", feature = "alloc"))]
 use alloc::vec::Vec;
-#[cfg(feature = "enable-pending-tracker")]
+#[cfg(any(
+    feature = "enable-pending-tracker",
+    feature = "enable-limit-trace-application-level-size"
+))]
 use core::panic::Location;
-#[cfg(all(feature = "enable-pending-tracker", feature = "alloc"))]
+#[cfg(all(
+    any(
+        feature = "enable-pending-tracker",
+        feature = "enable-limit-trace-application-level-size"
+    ),
+    feature = "alloc"
+))]
 use spin::Lazy;
 pub use types::*;
 
@@ -38,6 +47,14 @@ pub use types::*;
 compile_error!(
     "Feature 'core_error-support' cannot be used with 'std'. \
      Please disable 'core_error-support' when building for std targets."
+);
+
+#[cfg(all(
+    feature = "enable-limit-trace-application-level-size",
+    feature = "for-nightly-allocator-api-support"
+))]
+compile_error!(
+    "Feature 'enable-limit-trace-application-level-size' cannot be used with 'for-nightly-allocator-api-support'."
 );
 
 #[cfg(all(feature = "std", feature = "enable-default-handler"))]
@@ -66,6 +83,33 @@ pub const TRACE_REMOVE_TYPE: &str = {
         panic!("Invalid IART_TRACE_TYPE!");
     }
 };
+
+#[cfg(feature = "enable-limit-trace-application-level-size")]
+const TRACE_DATABASE_SIZE: usize = const_str_to_usize(env!("IART_TRACE_DATABASE_SIZE")); // TODO
+
+#[cfg(all(
+    feature = "enable-limit-trace-application-level-size",
+    feature = "alloc"
+))]
+static TRACE_DATA_BASE: Lazy<
+    Vec<spin::Mutex<alloc::collections::VecDeque<&'static Location<'static>>>>,
+> = // TODO
+    Lazy::new(|| {
+        (0..TRACE_DATABASE_SIZE)
+            .map(|_| spin::Mutex::new(alloc::collections::VecDeque::new()))
+            .collect()
+    });
+
+#[cfg(all(
+    feature = "enable-limit-trace-application-level-size",
+    not(feature = "alloc")
+))]
+static TRACE_DATA_BASE: [spin::Mutex<[Option<&'static Location<'static>>; BACK_TRACE_MAX]>;
+    TRACE_DATABASE_SIZE] =
+    [const { spin::Mutex::new([None; BACK_TRACE_MAX]) }; TRACE_DATABASE_SIZE]; // TODO
+
+#[cfg(all(feature = "enable-limit-trace-application-level-size"))]
+const TRACE_DATABASE_MAX_OFFSET: usize = const_str_to_usize(env!("IART_TRACKER_MAX_OFFSET")); // TODO
 
 #[allow(unused)]
 #[doc = include_str!("../doc/variable/TRACE_UNIQUE.md")]

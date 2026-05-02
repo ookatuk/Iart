@@ -21,9 +21,11 @@ use core::fmt::Formatter;
 use core::sync::atomic::Ordering;
 
 #[cfg(feature = "allow-backtrace-logging")]
+use crate::utils::create_trace;
+
+#[cfg(feature = "allow-backtrace-logging")]
 use crate::{BACK_TRACE_MAX, TRACE_REMOVE_TYPE, TRACE_UNIQUE};
-#[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]
-use alloc::collections::VecDeque;
+
 #[cfg(any(
     feature = "allow-backtrace-logging",
     feature = "enable-pending-tracker"
@@ -168,13 +170,7 @@ impl<Item> Iart<Item> {
             data: Some(Ok(())),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
-            log: {
-                #[allow(unused_mut)]
-                let mut log = VecDeque::new();
-                #[cfg(feature = "allow-backtrace-logging-with-ok")]
-                log.push_back(Location::caller());
-                Some(log)
-            },
+            log: create_trace::<true>(),
             trans_fns: None,
             item: Some(item.into()),
             #[cfg(feature = "enable-pending-tracker")]
@@ -191,15 +187,7 @@ impl<Item> Iart<Item> {
             data: Some(Ok(())),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
-            log: {
-                #[allow(unused_mut)]
-                let mut log = [None; BACK_TRACE_MAX];
-                #[cfg(feature = "allow-backtrace-logging-with-ok")]
-                {
-                    log[0] = Some(Location::caller());
-                }
-                Some(log)
-            },
+            log: create_trace::<true>(),
             trans_fns: None,
             item: Some(item.into()),
             #[cfg(feature = "enable-pending-tracker")]
@@ -225,11 +213,7 @@ impl<Item> Iart<Item> {
             data: Some(Err(detail)),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
-            log: {
-                let mut log = VecDeque::new();
-                log.push_back(Location::caller());
-                Some(log)
-            },
+            log: create_trace::<false>(),
             item: None,
             trans_fns: Some(to_any),
             #[cfg(feature = "enable-pending-tracker")]
@@ -254,11 +238,7 @@ impl<Item> Iart<Item> {
             data: Some(Err(detail)),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
-            log: {
-                let mut log = [None; BACK_TRACE_MAX];
-                log[0] = Some(Location::caller());
-                Some(log)
-            },
+            log: create_trace::<false>(),
             item: None,
             trans_fns: Some(to_any),
             #[cfg(feature = "enable-pending-tracker")]
@@ -283,11 +263,7 @@ impl<Item> Iart<Item> {
             data: Some(Err(detail)),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
-            log: {
-                let mut log = VecDeque::new();
-                log.push_back(Location::caller());
-                Some(log)
-            },
+            log: create_trace::<false>(),
             item: None,
             trans_fns: Some(to_any),
             #[cfg(feature = "enable-pending-tracker")]
@@ -367,7 +343,7 @@ impl<Item> Iart<Item> {
         self.handled = true;
 
         let _ = unsafe {
-            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Unwrap))
+            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::UnwrapUsed))
                 .unwrap_unchecked()
         };
 
@@ -665,11 +641,7 @@ impl<T> Default for Iart<T> {
             data: Some(Err(ErrorDetail::default())),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
-            log: {
-                let mut log = VecDeque::new();
-                log.push_back(Location::caller());
-                Some(log)
-            },
+            log: create_trace::<false>(),
             trans_fns: Some(jen_fns!(DummyErr)),
             item: None,
             #[cfg(feature = "enable-pending-tracker")]
@@ -683,11 +655,7 @@ impl<T> Default for Iart<T> {
             data: Some(Err(ErrorDetail::default())),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
-            log: {
-                let mut log = [None; BACK_TRACE_MAX];
-                log[0] = Some(Location::caller());
-                Some(log)
-            },
+            log: create_trace::<false>(),
             trans_fns: Some(jen_fns!(DummyErr)),
             item: None,
             #[cfg(feature = "enable-pending-tracker")]

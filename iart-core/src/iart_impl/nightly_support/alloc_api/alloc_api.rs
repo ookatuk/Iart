@@ -2,7 +2,7 @@
 
 use crate::events::{AutoRequestType, IartEvent};
 use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails, IartLogger};
-use crate::utils::{cold_path, unlikely};
+use crate::utils::{cold_path, create_trace, unlikely};
 use crate::{GetErrRet, Trans};
 use crate::{HANDLER, is_initialized_handler};
 use alloc::alloc::Allocator;
@@ -171,13 +171,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             handled: false,
             allocator: allocator.clone(),
             #[cfg(feature = "allow-backtrace-logging")]
-            log: {
-                #[allow(unused_mut)]
-                let mut log = VecDeque::<&'static Location<'static>, A>::new_in(allocator);
-                #[cfg(feature = "allow-backtrace-logging-with-ok")]
-                log.push_back(Location::caller());
-                Some(log)
-            },
+            log: create_trace::<true>(allocator),
             trans_fns: None,
             item: Some(item.into()),
             #[cfg(feature = "enable-pending-tracker")]
@@ -206,11 +200,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             handled: false,
             allocator: allocator.clone(),
             #[cfg(feature = "allow-backtrace-logging")]
-            log: {
-                let mut log = VecDeque::new_in(allocator.clone());
-                log.push_back(core::panic::Location::caller());
-                Some(log)
-            },
+            log: create_trace::<false>(allocator),
             trans_fns: Some(to_any),
             item: None,
             #[cfg(feature = "enable-pending-tracker")]
@@ -243,11 +233,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
                 handled: false,
                 allocator: allocator.clone(),
                 #[cfg(feature = "allow-backtrace-logging")]
-                log: {
-                    let mut log = VecDeque::new_in(allocator);
-                    log.push_back(Location::caller());
-                    Some(log)
-                },
+                log: create_trace::<false>(allocator),
                 trans_fns: Some(to_any),
                 item: None,
                 #[cfg(feature = "enable-pending-tracker")]
@@ -352,7 +338,7 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
         self.send_log();
 
         unsafe {
-            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::Unwrap))
+            self.send_log_to_handler::<true>(IartEvent::FunctionHook(AutoRequestType::UnwrapUsed))
                 .unwrap_unchecked()
         };
 
@@ -603,11 +589,7 @@ impl<T, A: alloc::alloc::Allocator + Clone + 'static + Default> Default for Iart
             data: Some(Err(ErrorDetail::default_in(alloc.clone()))),
             handled: false,
             #[cfg(feature = "allow-backtrace-logging")]
-            log: {
-                let mut log = VecDeque::new_in(alloc.clone());
-                log.push_back(Location::caller());
-                Some(log)
-            },
+            log: create_trace::<false>(alloc),
             allocator: alloc,
             item: None,
             trans_fns: Some(jen_fns!(DummyErr, A)),

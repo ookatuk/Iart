@@ -48,3 +48,5 @@ core_error-support = ["iart-core/core_error-support"]
 enable-default-handler = ["iart-core/enable-default-handler", "std"]
 
 alloc = ["iart-core/alloc", "iart-macros/alloc"]
+
+enable-limit-backtrace-slices = ["allow-backtrace-logging"] # TODO: update name

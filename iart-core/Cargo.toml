@@ -40,6 +40,9 @@ danger-allow-panic-if-unused = ["check-unused-result-with-ok"]
 core_error-support = ["core-error"]
 enable-default-handler = ["std"]
 
+enable-limit-trace-application-level-size = ["allow-backtrace-logging"]
+enable-limit-trace-application-level-size-tracking-count = ["enable-limit-trace-application-level-size"]
+
 alloc = []
 
 [dev-dependencies]

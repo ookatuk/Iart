@@ -50,19 +50,9 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static + Default + Send + Sync 
     #[track_caller]
     fn from_residual(mut residual: Iart<Infallible, A>) -> Self {
         let alloc = residual.allocator.clone();
-        residual.handled = true;
+        residual.send_log();
 
-        Self {
-            data: residual.data.take().map(|d| Err(d.unwrap_err())),
-            handled: false,
-            #[cfg(feature = "allow-backtrace-logging")]
-            log: residual.log.take(),
-            allocator: alloc,
-            trans_fns: residual.trans_fns.clone(),
-            item: None,
-            #[cfg(feature = "enable-pending-tracker")]
-            tracking_id: residual.tracking_id,
-        }
+        residual.internal_map(|_| unreachable!())
     }
 }
 

@@ -18,10 +18,24 @@ pub use core::hint::{cold_path, unlikely};
 
 #[cfg(feature = "enable-pending-tracker")]
 use crate::{RESULT_TRACK_MAX, TRACKER, TRACKER_MAX_OFFSET};
-#[cfg(feature = "enable-pending-tracker")]
+#[cfg(feature = "alloc")]
+use alloc::collections::VecDeque;
+#[cfg(any(
+    feature = "enable-limit-trace-application-level-size",
+    feature = "allow-backtrace-logging"
+))]
 use core::panic::Location;
-#[cfg(feature = "enable-pending-tracker")]
+#[cfg(any(
+    feature = "enable-pending-tracker",
+    feature = "enable-limit-trace-application-level-size"
+))]
 use core::sync::atomic::{AtomicUsize, Ordering};
+
+#[cfg(feature = "allow-backtrace-logging")]
+use crate::IartLog;
+
+#[cfg(feature = "enable-limit-trace-application-level-size")]
+use crate::BACK_TRACE_MAX;
 
 #[allow(unused)]
 #[doc = include_str!("../doc/fn/const_str_to_usize.md")]
@@ -232,4 +246,152 @@ pub fn remove_from_tracker(index: Option<usize>) {
         crate::TRACKING_COUNT.fetch_sub(1, Ordering::Relaxed);
         *TRACKER[index].lock() = None;
     }
+}
+
+#[cfg(all(
+    feature = "enable-limit-trace-application-level-size",
+    feature = "alloc"
+))]
+pub fn get_trace_location()
+-> Option<spin::MutexGuard<'static, alloc::collections::VecDeque<&'static Location<'static>>>> {
+    static OFFSET: AtomicUsize = AtomicUsize::new(0);
+
+    const ODD_TARGET: usize = if crate::TRACE_DATABASE_MAX_OFFSET > crate::TRACE_DATABASE_SIZE {
+        crate::TRACE_DATABASE_SIZE
+    } else {
+        crate::TRACE_DATABASE_MAX_OFFSET
+    };
+
+    #[cfg(feature = "enable-limit-trace-application-level-size-tracking-count")]
+    if crate::TRACKING_COUNT.load(Ordering::Relaxed) >= crate::TRACE_DATABASE_SIZE {
+        return None;
+    }
+
+    let mut target = OFFSET.fetch_add(1, Ordering::Relaxed) % ODD_TARGET;
+
+    for _ in 0..ODD_TARGET {
+        let res = crate::TRACE_DATA_BASE
+            .iter()
+            .enumerate()
+            .skip(target)
+            .step_by(ODD_TARGET)
+            .find_map(|(_, mutex)| mutex.try_lock());
+
+        if let Some(index) = res {
+            #[cfg(feature = "enable-pending-tracker-tracking-count")]
+            crate::TRACKING_COUNT.fetch_add(1, Ordering::Relaxed);
+            return Some(index);
+        }
+
+        target = (target + 1) % ODD_TARGET;
+        OFFSET.fetch_add(1, Ordering::Relaxed);
+    }
+    cold_path();
+
+    None
+}
+
+#[cfg(all(
+    feature = "enable-limit-trace-application-level-size",
+    not(feature = "alloc")
+))]
+pub fn get_trace_location()
+-> Option<spin::MutexGuard<'static, [Option<&'static Location<'static>>; crate::BACK_TRACE_MAX]>> {
+    static OFFSET: AtomicUsize = AtomicUsize::new(0);
+
+    const ODD_TARGET: usize = if crate::TRACE_DATABASE_MAX_OFFSET > crate::TRACE_DATABASE_SIZE {
+        crate::TRACE_DATABASE_SIZE
+    } else {
+        crate::TRACE_DATABASE_MAX_OFFSET
+    };
+
+    #[cfg(feature = "enable-limit-trace-application-level-size-tracking-count")]
+    if crate::TRACKING_COUNT.load(Ordering::Relaxed) >= crate::TRACE_DATABASE_SIZE {
+        return None;
+    }
+
+    let mut target = OFFSET.fetch_add(1, Ordering::Relaxed) % ODD_TARGET;
+
+    for _ in 0..ODD_TARGET {
+        let res = crate::TRACE_DATA_BASE
+            .iter()
+            .enumerate()
+            .skip(target)
+            .step_by(ODD_TARGET)
+            .find_map(|(_, mutex)| mutex.try_lock());
+
+        if let Some(index) = res {
+            #[cfg(feature = "enable-pending-tracker-tracking-count")]
+            crate::TRACKING_COUNT.fetch_add(1, Ordering::Relaxed);
+            return Some(index);
+        }
+
+        target = (target + 1) % ODD_TARGET;
+        OFFSET.fetch_add(1, Ordering::Relaxed);
+    }
+    cold_path();
+
+    None
+}
+
+#[track_caller]
+#[cfg(all(
+    feature = "allow-backtrace-logging",
+    not(feature = "for-nightly-allocator-api-support")
+))]
+#[inline]
+pub fn create_trace<const IS_OK: bool>() -> Option<IartLog> {
+    #[cfg(all(
+        not(feature = "enable-limit-trace-application-level-size"),
+        feature = "alloc"
+    ))]
+    let res = {
+        #[allow(unused_mut)]
+        let mut log: VecDeque<&'static Location<'static>> = VecDeque::new();
+        if IS_OK || cfg!(feature = "allow-backtrace-logging-with-ok") {
+            log.push_back(Location::caller());
+        }
+        Some(log)
+    };
+
+    #[cfg(all(
+        not(feature = "enable-limit-trace-application-level-size"),
+        not(feature = "alloc")
+    ))]
+    let res = {
+        #[allow(unused_mut)]
+        let mut log = [None; BACK_TRACE_MAX];
+        if IS_OK || cfg!(feature = "allow-backtrace-logging-with-ok") {
+            log[0] = Some(Location::caller());
+        }
+        Some(log)
+    };
+
+    #[cfg(feature = "enable-limit-trace-application-level-size")]
+    let res = {
+        let data = get_trace_location();
+
+        if IS_OK || cfg!(feature = "allow-backtrace-logging-with-ok") {
+            if let Some(mut log) = data {
+                log.push_back(Location::caller());
+            }
+        }
+
+        data
+    };
+
+    res
+}
+
+#[track_caller]
+#[cfg(all(
+    feature = "allow-backtrace-logging",
+    feature = "for-nightly-allocator-api-support"
+))]
+pub fn create_trace<const IS_OK: bool>(allocator: alloc::alloc::Allocator) -> IartLog {
+    let mut log = VecDeque::new_in(allocator);
+    if IS_OK || cfg!(feature = "allow-backtrace-logging-with-ok") {
+        log.push_back(Location::caller());
+    }
+    Some(log)
 }

@@ -1,17 +1,13 @@
-use crate::events::AutoRequestType::{ToResult, TryDownCastFail, TryDownCastUsed, TryUsed};
+#[cfg(feature = "allow-backtrace-logging")]
+use crate::IartLog;
+use crate::events::AutoRequestType::{ToResultUsed, TryDownCastFail, TryDownCastUsed, TryUsed};
 use crate::events::IartEvent;
 use crate::types::{DummyErr, ErrorDetail, Iart};
 use crate::utils::{cold_path, unlikely};
 use crate::{DownCasted, ToResultRet, Trans};
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;
-#[cfg(feature = "alloc")]
-use alloc::collections::VecDeque;
 use core::fmt::Debug;
-use core::panic::Location;
-
-#[cfg(not(feature = "alloc"))]
-use crate::BACK_TRACE_MAX;
 
 impl Default for ErrorDetail {
     #[inline]
@@ -105,7 +101,7 @@ impl<Item> Iart<Item> {
     where
         Item: Debug,
     {
-        self.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResult))
+        self.send_log_to_handler::<true>(IartEvent::FunctionHook(ToResultUsed))
             .unwrap();
 
         if self.data.is_none() {
@@ -262,30 +258,19 @@ impl<Item> Iart<Item> {
     #[doc(hidden)]
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_take_log.md")]
-    #[cfg(feature = "alloc")]
-    pub fn __internal_take_log(&mut self) -> Option<VecDeque<&'static Location<'static>>> {
-        #[cfg(feature = "allow-backtrace-logging")]
-        let res = self.log.take();
-        #[cfg(not(feature = "allow-backtrace-logging"))]
-        let res = None;
-        res
+    #[cfg(feature = "allow-backtrace-logging")]
+    pub fn __internal_take_log(&mut self) -> Option<IartLog> {
+        self.log.take()
     }
 
     #[doc(hidden)]
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_take_log.md")]
-    #[cfg(not(feature = "alloc"))]
-    pub fn __internal_take_log(
-        &mut self,
-    ) -> Option<[Option<&'static Location<'static>>; BACK_TRACE_MAX]> {
-        #[cfg(feature = "allow-backtrace-logging")]
-        let res = self.log.take();
-        #[cfg(not(feature = "allow-backtrace-logging"))]
-        let res = None;
-        res
+    #[cfg(not(feature = "allow-backtrace-logging"))]
+    pub fn __internal_take_log(&mut self) -> Option<i32> {
+        None
     }
 
-    #[doc(hidden)]
     #[inline]
     #[doc = include_str!("../../doc/fn/Iart/__internal_get_trans_fns.md")]
     pub unsafe fn __internal_get_trans_fns(&mut self) -> Option<Trans> {
@@ -331,11 +316,12 @@ impl<Item> Iart<Item> {
     #[cfg(feature = "alloc")]
     pub unsafe fn __internal_rebuild_err(
         err: ErrorDetail,
-        #[allow(unused)] log: Option<VecDeque<&'static Location<'static>>>,
+        #[cfg(feature = "allow-backtrace-logging")] log: Option<IartLog>,
+        #[cfg(not(feature = "allow-backtrace-logging"))] _: Option<u32>,
         trans_fns: Option<Trans>,
         item: Option<Item>,
         #[cfg(feature = "for-nightly-allocator-api-support")] alloc: Option<alloc::alloc::Global>,
-        #[cfg(not(feature = "for-nightly-allocator-api-support"))] _alloc: Option<u32>,
+        #[cfg(not(feature = "for-nightly-allocator-api-support"))] _: Option<u32>,
         #[allow(unused)] track_id: Option<usize>,
     ) -> Self {
         Self {
@@ -351,31 +337,6 @@ impl<Item> Iart<Item> {
             tracking_id: track_id,
         }
     }
-
-    #[doc(hidden)]
-    #[inline(always)]
-    #[doc = include_str!("../../doc/fn/Iart/__internal_rebuild_err.md")]
-    #[cfg(not(feature = "alloc"))]
-    pub unsafe fn __internal_rebuild_err(
-        err: ErrorDetail,
-        #[allow(unused)] log: Option<[Option<&'static Location<'static>>; BACK_TRACE_MAX]>,
-        trans_fns: Option<Trans>,
-        item: Option<Item>,
-        _alloc: Option<u32>,
-        #[allow(unused)] track_id: Option<usize>,
-    ) -> Self {
-        Self {
-            handled: false,
-            data: Some(Err(err)),
-            item,
-            #[cfg(feature = "allow-backtrace-logging")]
-            log,
-            trans_fns,
-            #[cfg(feature = "enable-pending-tracker")]
-            tracking_id: track_id,
-        }
-    }
-
     #[doc(hidden)]
     #[inline(always)]
     #[doc = include_str!("../../doc/fn/Iart/__internal_take_item.md")]

@@ -204,8 +204,8 @@ fn test_try_ok_flow() {
     let _guard = TEST_LOG_LOCK.lock();
 
     fn f() -> Iart<i32> {
-        let a = Iart::new_ok(10)?;
-        let b = Iart::new_ok(20)?;
+        let a: i32 = Iart::new_ok(10)?;
+        let b: i32 = Iart::new_ok(20)?;
         Iart::new_ok(a + b)
     }
 

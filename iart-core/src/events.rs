@@ -9,14 +9,21 @@ pub enum AutoRequestType {
     Expect,
     GetOk,
     GetErr,
-    Unwrap,
+    UnwrapUsed,
     UnwrapErr,
     TryDownCastFail,
     TryDownCastUsed,
-    ToResult,
+    ToResultUsed,
     ToResultFail,
     Map,
     UnwrapUnchecked,
+}
+
+#[non_exhaustive]
+pub enum FailType {
+    // TODO: DOC
+    FailToGetTraceDatabaseSlot,
+    FailToGetTrackerSlot,
 }
 
 #[non_exhaustive]
@@ -24,6 +31,7 @@ pub enum AutoRequestType {
 pub enum IartEvent<'a, 'b> {
     DroppedWithoutCheck,
     FunctionHook(AutoRequestType),
+    CreationDegraded(FailType),
     TraceOverFlow,
     DisplayRequest(&'a mut Formatter<'b>),
     DebugRequest(&'a mut Formatter<'b>),
