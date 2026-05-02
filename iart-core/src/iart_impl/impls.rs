@@ -524,5 +524,17 @@ impl<Item: core::fmt::Debug> Iart<Item> {
 unsafe impl<T: Send> Send for Iart<T> {}
 unsafe impl<T: Sync> Sync for Iart<T> {}
 
-#[cfg(feature = "core_error-support")]
-impl core_error::Error for Iart {}
+#[cfg(all(
+    feature = "core_error-support",
+    not(feature = "for-nightly-allocator-api-support")
+))]
+impl<T: core::fmt::Debug + core::fmt::Display> core_error::Error for Iart<T> {}
+
+#[cfg(all(
+    feature = "core_error-support",
+    feature = "for-nightly-allocator-api-support"
+))]
+impl<T: core::fmt::Debug + core::fmt::Display, A: alloc::alloc::Allocator + Clone + 'static>
+    core_error::Error for Iart<T, A>
+{
+}
