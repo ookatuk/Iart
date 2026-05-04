@@ -305,6 +305,9 @@ A:
 `alloc`
 > Supports Box instead of static references.
 
+> [!TIP]
+> The `1.x` series is very memory inefficient when using `no-alloc`, so we recommend using `2.x` instead.
+
 # How to install?
 `cargo add iart`
 
