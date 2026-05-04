@@ -1,6 +1,6 @@
 # result-aat: Result and advanced trace
 
-[![Downloads](https://img.shields.io/crates/d/iart.svg)](https://crates.io/crates/iart)
+[![Downloads](https://img.shields.io/crates/d/result-aat.svg)](https://crates.io/crates/iart)
 [![Crates.io](https://img.shields.io/crates/v/iart.svg)](https://crates.io/crates/iart)
 [![Docs.rs](https://docs.rs/iart/badge.svg)](https://docs.rs/iart)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -82,10 +82,10 @@ fn main() {
 
     assert_eq!(res, 5);
 
-    // Unless someone maliciously provides invalid values to the explicitly `unsafe` function [`iart_core::ErrorDetail::new`], UB will not occur in general use(and tests works).
-    // Conversely, it is marked `unsafe` precisely because [`iart_core::ErrorDetail::new`] results in UB if given invalid values.
+    // Unless someone maliciously provides invalid values to the explicitly `unsafe` function [`result-aat-core::ErrorDetail::new`], UB will not occur in general use(and tests works).
+    // Conversely, it is marked `unsafe` precisely because [`result-aat-core::ErrorDetail::new`] results in UB if given invalid values.
     //
-    // Besides, why should we even need to account for manual tampering with [`iart_core::ErrorDetail::new`]?
+    // Besides, why should we even need to account for manual tampering with [`result-aat-core::ErrorDetail::new`]?
     let res: Result<(Result<(), (DummyErr, Box<ErrorDetail>)>, Option<u32>, Option<VecDeque<&'static Location<'static>>>), Iart<u32>> = unsafe { test().to_result() }; // can this!
 
     // This can be done even under normal circumstances.
@@ -406,7 +406,7 @@ A: Then let's use to_result.(A cast from dyn to the type specified in the argume
 Q: There's an `unsafe` method, but is it safe?
 
 A:
-> It's safe to use unless you perform some kind of black magic like crafting Iart via [`iart_core::ErrorDetail::new`].
+> It's safe to use unless you perform some kind of black magic like crafting Iart via [`result-aat-core::ErrorDetail::new`].
 >
 > `UB` only occurs when two different types are involved.
 
