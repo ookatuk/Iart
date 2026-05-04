@@ -42,11 +42,11 @@ functionality with no-std is not restricted!
 ## Examples(It works in stable)
 
 ```doctestinjectablerust
-use iart_rs::prelude::Iart;
-use iart_rs::prelude::DummyErr;
-use iart_rs::prelude::ErrorDetail;
-use iart_rs::prelude::ToResultRet;
-use iart_rs::iart_try;
+use result_aat::prelude::Iart;
+use result_aat::prelude::DummyErr;
+use result_aat::prelude::ErrorDetail;
+use result_aat::prelude::ToResultRet;
+use result_aat::iart_try;
 use core::panic::Location;
 
 use std::collections::VecDeque;
@@ -172,13 +172,13 @@ Of course, we welcome suggestions!
 ## Advanced Examples(works in stable)
 
 ```doctestinjectablerust
-use iart_rs::prelude::Iart;
-use iart_rs::prelude::DummyErr;
-use iart_rs::prelude::events::IartEvent;
-use iart_rs::prelude::events::AutoRequestType;
-use iart_rs::prelude::IartHandleDetails;
-use iart_rs::prelude::set_handler;
-use iart_rs::IartErr;
+use result_aat::prelude::Iart;
+use result_aat::prelude::DummyErr;
+use result_aat::prelude::events::IartEvent;
+use result_aat::prelude::events::AutoRequestType;
+use result_aat::prelude::IartHandleDetails;
+use result_aat::prelude::set_handler;
+use result_aat::IartErr;
 use core::fmt;
 
 #[derive(
