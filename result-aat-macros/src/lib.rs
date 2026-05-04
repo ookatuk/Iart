@@ -99,7 +99,7 @@ pub fn derive_iart_err(item: TokenStream) -> TokenStream {
 
     #[cfg(all(not(feature = "for-nightly-allocator-api-support"), feature = "alloc"))]
     let body = quote! {
-            fn clone_box(&self) -> Box<dyn ::iart::prelude::IartErr + Send + Sync + 'static> {
+            fn clone_box(&self) -> Box<dyn ::result_aat::prelude::IartErr + Send + Sync + 'static> {
             Box::new(self.clone())
         }
     };
