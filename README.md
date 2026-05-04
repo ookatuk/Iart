@@ -95,7 +95,7 @@ fn main() {
     });
 
     // 3. Automatic Warning on Drop
-    // If an error is dropped without being handled, iart-rs automatically notifies the handler.
+    // If an error is dropped without being handled, result-aat automatically notifies the handler.
     # unsafe { res_err1.__internal_mark_handled() };
     drop(res_err1); // Triggers a warning to the handler
 
@@ -109,7 +109,7 @@ fn main() {
     }
 }
 ```
-[see examples](iart-rs/examples)
+[see examples](result-aat/examples)
 
 ## Nightly build only?
 
