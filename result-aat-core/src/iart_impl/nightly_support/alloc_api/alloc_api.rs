@@ -3,8 +3,8 @@
 use crate::events::{AutoRequestType, IartEvent};
 use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails, IartHandler};
 use crate::utils::{cold_path, unlikely};
+use crate::{is_initialized_handler, HANDLER};
 use crate::{GetErrRet, Trans};
-use crate::{HANDLER, is_initialized_handler};
 use alloc::alloc::Allocator;
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
@@ -142,7 +142,11 @@ impl<Item, A: alloc::alloc::Allocator + Clone + 'static> Iart<Item, A> {
             };
 
             let res = logger(event, details);
-            if NOT_RESULT_REQUIRED { Ok(()) } else { res }
+            if NOT_RESULT_REQUIRED {
+                Ok(())
+            } else {
+                res
+            }
         } else {
             Ok(())
         }

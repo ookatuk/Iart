@@ -1,6 +1,5 @@
 #![doc = include_str!("../../../../doc/modules/non_alloc_api.md")]
 
-use crate::Trans;
 use crate::events::AutoRequestType;
 use crate::events::IartEvent;
 use crate::is_initialized_handler;
@@ -8,6 +7,7 @@ use crate::types::IartHandler;
 use crate::types::{DummyErr, ErrorDetail, Iart, IartErr, IartHandleDetails};
 use crate::utils::cold_path;
 use crate::utils::unlikely;
+use crate::Trans;
 use crate::{GetErrRet, HANDLER};
 #[cfg(feature = "alloc")]
 use alloc::borrow::Cow;

@@ -1,4 +1,4 @@
-# Iart-rs: **I**s **A**dvanced **R**esult **T**race (-rs)
+# result-aat: Result and advanced trace
 
 [![Downloads](https://img.shields.io/crates/d/iart.svg)](https://crates.io/crates/iart)
 [![Crates.io](https://img.shields.io/crates/v/iart.svg)](https://crates.io/crates/iart)
@@ -6,14 +6,7 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 > [!WARNING]
-> Disclaimer: This project, "iart-rs,"
-> 
-> is an independent,
-> open-source initiative and is not affiliated with, sponsored, or endorsed by IART Lab GmbH.
-> 
-> The name is derived from "Is Advanced Result Trace."
-> 
-> For trademark-related inquiries, please contact me at the email address listed in my GitHub profile.
+> The former name of this project (`Iart`) has been changed to `result-aat` due to potential trademark infringement.
 
 ---
 

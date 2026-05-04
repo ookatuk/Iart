@@ -251,8 +251,8 @@ pub fn remove_from_tracker(index: Option<usize>) {
     feature = "enable-limit-trace-application-level-size",
     feature = "alloc"
 ))]
-pub fn get_trace_location()
--> Option<spin::MutexGuard<'static, alloc::collections::VecDeque<&'static Location<'static>>>> {
+pub fn get_trace_location(
+) -> Option<spin::MutexGuard<'static, alloc::collections::VecDeque<&'static Location<'static>>>> {
     static OFFSET: AtomicUsize = AtomicUsize::new(0);
 
     const ODD_TARGET: usize = if crate::TRACE_DATABASE_MAX_OFFSET > crate::TRACE_DATABASE_SIZE {
@@ -294,8 +294,9 @@ pub fn get_trace_location()
     feature = "enable-limit-trace-application-level-size",
     not(feature = "alloc")
 ))]
-pub fn get_trace_location()
--> Option<spin::MutexGuard<'static, [Option<&'static Location<'static>>; crate::BACK_TRACE_MAX]>> {
+pub fn get_trace_location(
+) -> Option<spin::MutexGuard<'static, [Option<&'static Location<'static>>; crate::BACK_TRACE_MAX]>>
+{
     static OFFSET: AtomicUsize = AtomicUsize::new(0);
 
     const ODD_TARGET: usize = if crate::TRACE_DATABASE_MAX_OFFSET > crate::TRACE_DATABASE_SIZE {

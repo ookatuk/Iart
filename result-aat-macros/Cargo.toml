@@ -1,5 +1,5 @@
 [package]
-name = "iart-rs-macros"
+name = "result-aat-macros"
 
 edition.workspace = true
 version.workspace = true
@@ -23,4 +23,4 @@ proc-macro = true
 [dependencies]
 syn = { version = "^2.0" }
 quote = { version = "^1.0" }
-iart-rs-core = { workspace = true }
+result-aat-core = { workspace = true }

@@ -1,9 +1,9 @@
-#[cfg(feature = "allow-backtrace-logging")]
-use crate::IartBacktrace;
 use crate::events::AutoRequestType::{ToResultUsed, TryDownCastFail, TryDownCastUsed, TryUsed};
 use crate::events::IartEvent;
 use crate::types::{DummyErr, ErrorDetail, Iart};
 use crate::utils::{cold_path, unlikely};
+#[cfg(feature = "allow-backtrace-logging")]
+use crate::IartBacktrace;
 use crate::{DownCasted, ToResultRet, Trans};
 #[cfg(feature = "alloc")]
 use alloc::boxed::Box;

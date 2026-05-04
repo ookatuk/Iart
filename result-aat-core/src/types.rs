@@ -77,10 +77,10 @@ pub struct ErrorDetail {
 
 #[cfg(not(feature = "for-nightly-allocator-api-support"))]
 mod non_api_impl {
-    #[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
-    use crate::BACK_TRACE_MAX;
     use crate::events::IartEvent;
     use crate::types::ErrorDetail;
+    #[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
+    use crate::BACK_TRACE_MAX;
     #[cfg(feature = "alloc")]
     use alloc::boxed::Box;
     #[cfg(all(feature = "allow-backtrace-logging", feature = "alloc"))]

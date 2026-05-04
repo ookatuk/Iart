@@ -1,8 +1,8 @@
 #![doc = include_str!("../../../../doc/modules/non_alloc_api.md")]
 
-use crate::IartErr;
 use crate::events::{AutoRequestType, IartEvent};
 use crate::types::Iart;
+use crate::IartErr;
 use core::convert::Infallible;
 use core::fmt::Debug;
 use core::ops::{ControlFlow, FromResidual, Try};

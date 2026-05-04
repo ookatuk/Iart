@@ -2,16 +2,16 @@
 
 use crate::types::Iart;
 
-use crate::IartErr;
 use crate::events::{AutoRequestType, IartEvent};
+use crate::IartErr;
 use core::convert::Infallible;
 use core::fmt::Debug;
 use core::ops::{ControlFlow, FromResidual, Try};
 
 impl<
-    Item: Debug + 'static,
-    A: alloc::alloc::Allocator + Clone + 'static + Default + Send + Sync + Debug,
-> Try for Iart<Item, A>
+        Item: Debug + 'static,
+        A: alloc::alloc::Allocator + Clone + 'static + Default + Send + Sync + Debug,
+    > Try for Iart<Item, A>
 {
     type Output = Item;
     type Residual = Iart<Infallible, A>;
@@ -46,8 +46,10 @@ impl<
     }
 }
 
-impl<Item: 'static, A: alloc::alloc::Allocator + Clone + 'static + Default + Send + Sync + Debug>
-    FromResidual<Iart<Infallible, A>> for Iart<Item, A>
+impl<
+        Item: 'static,
+        A: alloc::alloc::Allocator + Clone + 'static + Default + Send + Sync + Debug,
+    > FromResidual<Iart<Infallible, A>> for Iart<Item, A>
 {
     #[track_caller]
     fn from_residual(mut residual: Iart<Infallible, A>) -> Self {
