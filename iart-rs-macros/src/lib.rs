@@ -19,7 +19,7 @@ pub fn iart_open_no_log(input: TokenStream) -> TokenStream {
                     item
                 }
                 Some(::core::result::Result::Err(err)) => {
-                    return unsafe{::iart::prelude::Iart::__internal_rebuild_err(
+                    return unsafe{::iart_rs::prelude::Iart::__internal_rebuild_err(
                         err,
                         iart.__internal_take_log(),
                         iart.__internal_get_trans_fns(),
@@ -56,7 +56,7 @@ pub fn iart_try(input: TokenStream) -> TokenStream {
                         unsafe{iart.__internal_take_item()}.unwrap()
                     }
                     Some(::core::result::Result::Err(err)) => {
-                        return unsafe{::iart::prelude::Iart::__internal_rebuild_err(
+                        return unsafe{::iart_rs::prelude::Iart::__internal_rebuild_err(
                             err,
                             iart.__internal_take_log(),
                             iart.__internal_get_trans_fns(),
@@ -89,7 +89,7 @@ pub fn derive_iart_err(item: TokenStream) -> TokenStream {
 
     #[cfg(feature = "for-nightly-allocator-api-support")]
     let body = quote! {
-            fn clone_box_in<'a>(&self, alloc: ::alloc::alloc::Global) -> Box<dyn ::iart::prelude::IartErr<::alloc::alloc::Global> + 'a + Send + Sync, ::alloc::alloc::Global>
+            fn clone_box_in<'a>(&self, alloc: ::alloc::alloc::Global) -> Box<dyn ::iart_rs::prelude::IartErr<::alloc::alloc::Global> + 'a + Send + Sync, ::alloc::alloc::Global>
         where
             Self: 'a,
         {
@@ -108,7 +108,7 @@ pub fn derive_iart_err(item: TokenStream) -> TokenStream {
     let body = quote! {};
 
     let expanded = quote! {
-        impl ::iart::prelude::IartErr for #name
+        impl ::iart_rs::prelude::IartErr for #name
         where
             Self: ::core::clone::Clone + 'static
         {

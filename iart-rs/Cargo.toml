@@ -1,0 +1,53 @@
+[package]
+name = "iart-rs"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+description.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "../README.md"
+
+[dependencies]
+iart-rs-core = { workspace = true }
+iart-rs-macros = { workspace = true }
+
+[features]
+default = ["std", "allow-backtrace-logging", "check-unused-result", "enable-default-handler"]
+
+nightly = [
+    "for-nightly-likely-optimization",
+    "for-nightly-try-support",
+    "for-nightly-allocator-api-support",
+    "for-nightly-error-generic-member-access"
+]
+
+std = ["iart-rs-core/std", "alloc"]
+
+for-nightly-likely-optimization = ["iart-rs-core/for-nightly-likely-optimization"]
+for-nightly-try-support = ["iart-rs-core/for-nightly-try-support", "iart-rs-macros/for-nightly-try-support"]
+for-nightly-error-generic-member-access = ["iart-rs-core/for-nightly-error-generic-member-access"]
+for-nightly-allocator-api-support = ["iart-rs-core/for-nightly-allocator-api-support", "iart-rs-macros/for-nightly-allocator-api-support", "alloc"]
+
+enable-pending-tracker = ["iart-rs-core/enable-pending-tracker"]
+enable-pending-tracker-tracking-count = ["iart-rs-core/enable-pending-tracker-tracking-count", "enable-pending-tracker"]
+
+no-trace-dedup = ["iart-rs-core/no-trace-dedup"]
+
+allow-backtrace-logging = ["iart-rs-core/allow-backtrace-logging"]
+allow-backtrace-logging-with-ok = ["iart-rs-core/allow-backtrace-logging-with-ok", "allow-backtrace-logging"]
+
+check-unused-result = ["iart-rs-core/check-unused-result"]
+check-unused-result-with-ok = ["iart-rs-core/check-unused-result-with-ok", "check-unused-result"]
+
+danger-allow-panic-if-unused = ["iart-rs-core/danger-allow-panic-if-unused", "check-unused-result-with-ok"]
+
+core_error-support = ["iart-rs-core/core_error-support"]
+enable-default-handler = ["iart-rs-core/enable-default-handler", "std"]
+
+alloc = ["iart-rs-core/alloc", "iart-rs-macros/alloc"]
+
+enable-limit-trace-application-level-size = ["allow-backtrace-logging", "iart-rs-core/enable-limit-trace-application-level-size"]
+enable-limit-trace-application-level-size-tracking-count = ["enable-limit-trace-application-level-size", "iart-rs-core/enable-limit-trace-application-level-size-tracking-count"]

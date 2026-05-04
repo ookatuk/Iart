@@ -1,9 +1,19 @@
-# Iart: **I**s **A**dvanced **R**esult **T**race
+# Iart-rs: **I**s **A**dvanced **R**esult **T**race (-rs)
 
 [![Downloads](https://img.shields.io/crates/d/iart.svg)](https://crates.io/crates/iart)
 [![Crates.io](https://img.shields.io/crates/v/iart.svg)](https://crates.io/crates/iart)
 [![Docs.rs](https://docs.rs/iart/badge.svg)](https://docs.rs/iart)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
+> [!WARNING]
+> Disclaimer: This project, "iart-rs,"
+> 
+> is an independent,
+> open-source initiative and is not affiliated with, sponsored, or endorsed by IART Lab GmbH.
+> 
+> The name is derived from "Is Advanced Result Trace."
+> 
+> For trademark-related inquiries, please contact me at the email address listed in my GitHub profile.
 
 ---
 
@@ -34,11 +44,11 @@ functionality with no-std is not restricted!
 ## Examples(It works in stable)
 
 ```doctestinjectablerust
-use iart::prelude::Iart;
-use iart::prelude::DummyErr;
-use iart::prelude::ErrorDetail;
-use iart::prelude::ToResultRet;
-use iart::iart_try;
+use iart_rs::prelude::Iart;
+use iart_rs::prelude::DummyErr;
+use iart_rs::prelude::ErrorDetail;
+use iart_rs::prelude::ToResultRet;
+use iart_rs::iart_try;
 use core::panic::Location;
 
 use std::collections::VecDeque;
@@ -92,7 +102,7 @@ fn main() {
     });
 
     // 3. Automatic Warning on Drop
-    // If an error is dropped without being handled, iart automatically notifies the handler.
+    // If an error is dropped without being handled, iart-rs automatically notifies the handler.
     # unsafe { res_err1.__internal_mark_handled() };
     drop(res_err1); // Triggers a warning to the handler
 
@@ -106,7 +116,7 @@ fn main() {
     }
 }
 ```
-[see examples](./iart/examples)
+[see examples](iart-rs/examples)
 
 ## Nightly build only?
 
@@ -164,13 +174,13 @@ Of course, we welcome suggestions!
 ## Advanced Examples(works in stable)
 
 ```doctestinjectablerust
-use iart::prelude::Iart;
-use iart::prelude::DummyErr;
-use iart::prelude::events::IartEvent;
-use iart::prelude::events::AutoRequestType;
-use iart::prelude::IartHandleDetails;
-use iart::prelude::set_handler;
-use iart::IartErr;
+use iart_rs::prelude::Iart;
+use iart_rs::prelude::DummyErr;
+use iart_rs::prelude::events::IartEvent;
+use iart_rs::prelude::events::AutoRequestType;
+use iart_rs::prelude::IartHandleDetails;
+use iart_rs::prelude::set_handler;
+use iart_rs::IartErr;
 use core::fmt;
 
 #[derive(

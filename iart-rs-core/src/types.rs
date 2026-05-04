@@ -130,6 +130,7 @@ mod non_api_impl {
 
     #[cfg(all(not(feature = "alloc"), feature = "allow-backtrace-logging"))]
     #[doc = include_str!("../doc/structs/IartBacktraceRef.md")]
+
     pub type IartBacktraceRef<'a> = &'a [Option<&'static Location<'static>>];
 
     #[doc = include_str!("../doc/structs/Trans.md")]
