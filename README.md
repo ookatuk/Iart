@@ -7,7 +7,12 @@
 
 > [!WARNING]
 > The former name of this project (`Iart`) has been changed to `result-aat` due to potential trademark infringement.
-
+>
+> discussions: https://github.com/ookatuk/Iart/issues/12
+> 
+> or
+> 
+> discussions: https://github.com/ookatuk/result-aat/issues/12
 ---
 
 > [!TIP]
