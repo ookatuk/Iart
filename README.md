@@ -1,8 +1,8 @@
 # result-aat: Result and advanced trace
 
-[![Downloads](https://img.shields.io/crates/d/result-aat.svg)](https://crates.io/crates/iart)
-[![Crates.io](https://img.shields.io/crates/v/iart.svg)](https://crates.io/crates/iart)
-[![Docs.rs](https://docs.rs/iart/badge.svg)](https://docs.rs/iart)
+[![Downloads](https://img.shields.io/crates/d/result-aat.svg)](https://crates.io/crates/result-aat)
+[![Crates.io](https://img.shields.io/crates/v/result-aat.svg)](https://crates.io/crates/result-aat)
+[![Docs.rs](https://docs.rs/result-aat/badge.svg)](https://docs.rs/result-aat)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 > [!WARNING]

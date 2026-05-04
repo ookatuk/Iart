@@ -19,7 +19,7 @@ pub fn iart_open_no_log(input: TokenStream) -> TokenStream {
                     item
                 }
                 Some(::core::result::Result::Err(err)) => {
-                    return unsafe{::iart::prelude::Iart::__internal_rebuild_err(
+                    return unsafe{::result_aat::prelude::result_aat::__internal_rebuild_err(
                         err,
                         iart.__internal_take_log(),
                         iart.__internal_get_trans_fns(),
@@ -55,7 +55,7 @@ pub fn iart_try(input: TokenStream) -> TokenStream {
                         item
                     }
                     Some(::core::result::Result::Err(err)) => {
-                        return unsafe{::iart::prelude::Iart::__internal_rebuild_err(
+                        return unsafe{::result_aat::prelude::result_aat::__internal_rebuild_err(
                             err,
                             iart.__internal_take_log(),
                             iart.__internal_get_trans_fns(),
@@ -87,7 +87,7 @@ pub fn derive_iart_err(item: TokenStream) -> TokenStream {
 
     #[cfg(feature = "for-nightly-allocator-api-support")]
     let body = quote! {
-            fn clone_box_in<'a>(&self, alloc: ::alloc::alloc::Global) -> Box<dyn ::iart::prelude::IartErr<::alloc::alloc::Global> + 'a + Send + Sync, ::alloc::alloc::Global>
+            fn clone_box_in<'a>(&self, alloc: ::alloc::alloc::Global) -> Box<dyn ::result_aat::prelude::IartErr<::alloc::alloc::Global> + 'a + Send + Sync, ::alloc::alloc::Global>
         where
             Self: 'a,
         {
@@ -97,7 +97,7 @@ pub fn derive_iart_err(item: TokenStream) -> TokenStream {
 
     #[cfg(all(not(feature = "for-nightly-allocator-api-support"), feature = "alloc"))]
     let body = quote! {
-            fn clone_box(&self) -> Box<dyn ::iart::prelude::IartErr + Send + Sync + 'static> {
+            fn clone_box(&self) -> Box<dyn ::result_aat::prelude::IartErr + Send + Sync + 'static> {
             Box::new(self.clone())
         }
     };
@@ -109,7 +109,7 @@ pub fn derive_iart_err(item: TokenStream) -> TokenStream {
     let body = quote! {};
 
     let expanded = quote! {
-        impl ::iart::prelude::IartErr for #name
+        impl ::result_aat::prelude::IartErr for #name
         where
             Self: ::core::clone::Clone + 'static
         {
