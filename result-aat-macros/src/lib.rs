@@ -2,7 +2,7 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Expr, parse_macro_input};
+use syn::{parse_macro_input, DeriveInput, Expr};
 
 #[proc_macro]
 #[doc = include_str!("../doc/macros/iart_open_no_log.md")]
