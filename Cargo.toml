@@ -6,7 +6,7 @@ members = ["result-aat", "result-aat-core", "result-aat-macros"]
 [workspace.package]
 edition = "2024"
 
-version = "2.0.0-beta.1"
+version = "2.0.0-beta.2"
 authors = ["ookatu <hgfhgfojgljgjhdiopyfgiiiiiu@outlook.com>"]
 
 description = "The Infomation and Result Trace crate"
