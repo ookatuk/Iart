@@ -1,5 +1,5 @@
 [package]
-name = "iart-core"
+name = "result-aat-core"
 
 version.workspace = true
 edition.workspace = true

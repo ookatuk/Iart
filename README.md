@@ -1,10 +1,18 @@
-# Iart: **I**s **A**dvanced **R**esult **T**race
+# result-aat: Result and advanced trace
 
 [![Downloads](https://img.shields.io/crates/d/iart.svg)](https://crates.io/crates/iart)
 [![Crates.io](https://img.shields.io/crates/v/iart.svg)](https://crates.io/crates/iart)
 [![Docs.rs](https://docs.rs/iart/badge.svg)](https://docs.rs/iart)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
+> [!WARNING]
+> The former name of this project (`Iart`) has been changed to `result-aat` due to potential trademark infringement.
+>
+> discussions: https://github.com/ookatuk/Iart/issues/12
+>
+> or
+>
+> discussions: https://github.com/ookatuk/result-aat/issues/12
 ---
 
 a structure inspired by [`Result`], designed for `std` and `no-std`.
@@ -30,10 +38,10 @@ functionality with no-std is not restricted!
 ## Examples(It works in stable)
 
 ```doctestinjectablerust
-use iart::prelude::Iart;
-use iart::prelude::DummyErr;
-use iart::prelude::ErrorDetail;
-use iart::iart_try;
+use result_aat::prelude::Iart;
+use result_aat::prelude::DummyErr;
+use result_aat::prelude::ErrorDetail;
+use result_aat::iart_try;
 use core::panic::Location;
 
 use std::collections::VecDeque;
@@ -87,7 +95,7 @@ fn main() {
     });
 
     // 3. Automatic Warning on Drop
-    // If an error is dropped without being handled, iart automatically notifies the handler.
+    // If an error is dropped without being handled, result-aat automatically notifies the handler.
     # unsafe { res_err1.__internal_mark_handled() };
     drop(res_err1); // Triggers a warning to the handler
 
@@ -101,7 +109,7 @@ fn main() {
     }
 }
 ```
-[see examples](./iart/examples)
+[see examples](result-aat/examples)
 
 ## Nightly build only?
 
@@ -159,13 +167,13 @@ Of course, we welcome suggestions!
 ## Advanced Examples(works in stable)
 
 ```doctestinjectablerust
-use iart::prelude::Iart;
-use iart::prelude::DummyErr;
-use iart::prelude::events::IartEvent;
-use iart::prelude::events::AutoRequestType;
-use iart::prelude::IartHandleDetails;
-use iart::prelude::set_handler;
-use iart::IartErr;
+use result_aat::prelude::Iart;
+use result_aat::prelude::DummyErr;
+use result_aat::prelude::events::IartEvent;
+use result_aat::prelude::events::AutoRequestType;
+use result_aat::prelude::IartHandleDetails;
+use result_aat::prelude::set_handler;
+use result_aat::IartErr;
 use core::fmt;
 
 #[derive(

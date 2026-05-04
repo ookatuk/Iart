@@ -2,9 +2,9 @@
 
 extern crate alloc;
 
-use iart_core::events::{AutoRequestType, IartEvent};
-use iart_core::{Iart, IartHandleDetails, set_handler};
-use iart_macros::{IartErr, iart_try};
+use result_aat_core::events::{AutoRequestType, IartEvent};
+use result_aat_core::{Iart, IartHandleDetails, set_handler};
+use result_aat_macros::{IartErr, iart_try};
 use std::fmt::{Display, Formatter};
 
 #[allow(unexpected_cfgs)]

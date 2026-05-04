@@ -12,31 +12,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iart"
-version = "1.1.2"
-dependencies = [
- "iart-core",
- "iart-macros",
-]
-
-[[package]]
-name = "iart-core"
-version = "1.1.2"
-dependencies = [
- "core-error",
- "spin",
-]
-
-[[package]]
-name = "iart-macros"
-version = "1.1.2"
-dependencies = [
- "iart-core",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "lock_api"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -61,6 +36,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
 dependencies = [
  "proc-macro2",
+]
+
+[[package]]
+name = "result-aat"
+version = "1.1.2"
+dependencies = [
+ "result-aat-core",
+ "result-aat-macros",
+]
+
+[[package]]
+name = "result-aat-core"
+version = "1.1.2"
+dependencies = [
+ "core-error",
+ "spin",
+]
+
+[[package]]
+name = "result-aat-macros"
+version = "1.1.2"
+dependencies = [
+ "quote",
+ "result-aat-core",
+ "syn",
 ]
 
 [[package]]
