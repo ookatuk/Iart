@@ -6,7 +6,7 @@ members = ["result-aat", "result-aat-core", "result-aat-macros"]
 [workspace.package]
 edition = "2024"
 
-version = "2.0.0-beta.2"
+version = "2.0.0-beta.3"
 authors = ["ookatu <hgfhgfojgljgjhdiopyfgiiiiiu@outlook.com>"]
 
 description = "The Infomation and Result Trace crate"
@@ -18,6 +18,6 @@ keywords = ["error-handling", "no-std", "tracing", "diagnostics"]
 categories = ["rust-patterns", "no-std", "development-tools::debugging"]
 
 [workspace.dependencies]
-result-aat-core = { path = "result-aat-core", version = "2.0.0-beta.1", default-features = false }
-result-aat-macros = { path = "result-aat-macros", version = "2.0.0-beta.1", default-features = false }
+result-aat-core = { path = "result-aat-core", version = "2.0.0-beta.3", default-features = false }
+result-aat-macros = { path = "result-aat-macros", version = "2.0.0-beta.3", default-features = false }
 
