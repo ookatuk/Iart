@@ -477,3 +477,7 @@ A:
 > 3. `spin` has been changed from `dev-dependencies` to `dependencies`. (Currently, this only applies to `spin-mutex`, `once`, and `mutex`, `lazu`.)
 > 4. Some of the return values have been changed to structures.
 > 5. Also, please note that the types of return values for `err` and `unwrap_err` have changed.
+
+Q: (for nightly) I need to use `?`, but I can't implement the `Debug` trait!
+
+A: Maybe try using the `iart_try!` macro, as it probably doesn't require `Debug`.

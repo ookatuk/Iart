@@ -2,7 +2,7 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Expr};
+use syn::{DeriveInput, Expr, parse_macro_input};
 
 #[proc_macro]
 #[doc = include_str!("../doc/macros/iart_open_no_log.md")]
@@ -41,7 +41,6 @@ pub fn iart_open_no_log(input: TokenStream) -> TokenStream {
 pub fn iart_try(input: TokenStream) -> TokenStream {
     let e = parse_macro_input!(input as Expr);
 
-    #[cfg(not(feature = "for-nightly-try-support"))]
     let expanded = quote! {
         {
             let mut iart = #e;
@@ -53,7 +52,7 @@ pub fn iart_try(input: TokenStream) -> TokenStream {
                 match unsafe{iart.__internal_take_data()} {
                     Some(::core::result::Result::Ok(_)) => {
                         unsafe{iart.__internal_mark_handled()};
-                        unsafe{iart.__internal_take_item()}.unwrap()
+                        unsafe{iart.__internal_take_item()}.unwrap().into()
                     }
                     Some(::core::result::Result::Err(err)) => {
                         return unsafe{::result_aat::prelude::Iart::__internal_rebuild_err(
@@ -70,11 +69,41 @@ pub fn iart_try(input: TokenStream) -> TokenStream {
             }
         }
     };
-    #[cfg(feature = "for-nightly-try-support")]
+
+    TokenStream::from(expanded)
+}
+
+#[proc_macro]
+#[doc = include_str!("../doc/macros/iart_try.md")]
+pub fn iart_try_without_item(input: TokenStream) -> TokenStream {
+    let e = parse_macro_input!(input as Expr);
+
     let expanded = quote! {
         {
             let mut iart = #e;
-            iart?
+
+            {
+                iart.send_log();
+                unsafe{iart.__internal_send_try_used().unwrap()};
+
+                match unsafe{iart.__internal_take_data()} {
+                    Some(::core::result::Result::Ok(_)) => {
+                        unsafe{iart.__internal_mark_handled()};
+                        unsafe{iart.__internal_take_item()}.unwrap().into()
+                    }
+                    Some(::core::result::Result::Err(err)) => {
+                        return unsafe{::result_aat::prelude::Iart::__internal_rebuild_err(
+                            err,
+                            iart.__internal_take_log(),
+                            iart.__internal_get_trans_fns(),
+                            None,
+                            iart.__internal_get_allocator(),
+                            iart.__internal_take_track_id(),
+                        )};
+                    }
+                    None => panic!("Iart: consumed data in iart_try"),
+                }
+            }
         }
     };
 

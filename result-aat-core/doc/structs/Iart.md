@@ -6,6 +6,10 @@ You can enable other features by enabling the related features.
 
 See the added methods for details.
 
+# Try Infomation
+If you want to return an error of a different type with `?`, use the `iart_try_without_item!` macro.
+
+
 # Side Effects
 
 When dropping,

@@ -1,16 +1,13 @@
 #![doc = include_str!("../../../../doc/modules/non_alloc_api.md")]
 
+use crate::IartErr;
 use crate::events::{AutoRequestType, IartEvent};
 use crate::types::Iart;
-use crate::IartErr;
 use core::convert::Infallible;
 use core::fmt::Debug;
 use core::ops::{ControlFlow, FromResidual, Try};
 
-impl<Item> Try for Iart<Item>
-where
-    Item: Debug,
-{
+impl<Item: core::fmt::Debug> Try for Iart<Item> {
     type Output = Item;
     type Residual = Iart<Infallible>;
 
@@ -42,10 +39,7 @@ where
     }
 }
 
-impl<Item> FromResidual<Iart<Infallible>> for Iart<Item>
-where
-    Item: Debug,
-{
+impl<Item> FromResidual<Iart<Infallible>> for Iart<Item> {
     #[track_caller]
     fn from_residual(mut residual: Iart<Infallible>) -> Self {
         residual.send_log();
