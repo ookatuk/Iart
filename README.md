@@ -1,5 +1,10 @@
 # result-aat: Result and advanced trace
 
+> [!WARNING]
+> Due to doubts about my own technical skills and responsibility as a developer,
+>  including a lack of debugging ability for my own libraries,
+>  I have temporarily suspended development other than making corrections.
+
 [![Downloads](https://img.shields.io/crates/d/result-aat.svg)](https://crates.io/crates/result-aat)
 [![Crates.io](https://img.shields.io/crates/v/result-aat.svg)](https://crates.io/crates/result-aat)
 [![Docs.rs](https://docs.rs/result-aat/badge.svg)](https://docs.rs/result-aat)
